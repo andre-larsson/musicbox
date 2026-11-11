@@ -9,24 +9,38 @@ const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const hash = s => createHash('sha256').update(s).digest('hex').slice(0, 16);
 const head = 'tempo 120\nvoice lead flute\nvoice pad strings\nvoice bass upright\nvoice kick kick\n';
 
-// Hashes of the events the original Scrimshaw parser produced for its example scores.
-// If one of these changes, musicbox no longer plays Scrimshaw scores the same way.
+// Hashes of the events the original Scrimshaw parser produced for its example scores, leaving
+// out each slide's source note (`g`). If one of these changes, musicbox no longer plays Scrimshaw
+// scores the same way. Slides are the one deliberate difference: Scrimshaw slid a `~` note from
+// the voice's last note in the previous section; musicbox slides from the note before it.
 const UPSTREAM = {
-  '01-moonlit-harbor.scrim': '02b44671e309cdd5',
+  '01-moonlit-harbor.scrim': '5c64d02f146cc071',
   '02-rusty-anchor.scrim': 'fd35d3e9cad2f8e8',
   '03-ghost-galleon.scrim': 'acf865968fcb4ae0',
-  '04-jungle-path.scrim': '17f47918c4963c7e',
+  '04-jungle-path.scrim': '574d2bb214855104',
   '05-duel-on-the-docks.scrim': '644b3e64dc126bee',
   '06-lantern-waltz.scrim': '066fde49d955f7f0'
 };
+const noSlides = evs => evs.map(({ g, ...e }) => e);
 
-test('Scrimshaw example scores compile exactly as upstream', () => {
+test('Scrimshaw example scores compile exactly as upstream, apart from slide sources', () => {
   for (const [file, h] of Object.entries(UPSTREAM)) {
     const s = compile(read('scores/scrimshaw/' + file));
     assert.deepEqual(s.errors, [], file);
     assert.deepEqual(s.warnings, [], file);
-    assert.equal(hash(JSON.stringify({ intro: s.intro.events, loop: s.loop.events })), h, file);
+    assert.equal(hash(JSON.stringify({ intro: noSlides(s.intro.events), loop: noSlides(s.loop.events) })), h, file);
   }
+});
+
+test('a ~ note slides from the note before it in the same voice', () => {
+  const s = compile(head + 'pattern A\nbass | D2:4 ~A2:4 E2:4 ~G2:4 |\npattern B\nbass | ~D2:8 .:8 |\nloop A B');
+  assert.deepEqual(s.errors, []);
+  const slides = s.loop.events.filter(e => e.g != null).map(e => [e.g, e.m[0]]);
+  assert.deepEqual(slides, [[38, 45], [40, 43], [43, 38]]);
+  // the upstream examples now slide the way they are written: D2 to A2, A2 to D3, E1 to E2
+  const harbor = compile(read('scores/scrimshaw/01-moonlit-harbor.scrim'));
+  assert.deepEqual([...harbor.intro.events, ...harbor.loop.events].filter(e => e.g != null).map(e => [e.g, e.m.at(-1)]),
+    [[38, 45], [45, 50], [38, 45], [45, 50], [40, 45], [52, 45]]);
 });
 
 test('the demo score compiles cleanly', () => {

@@ -763,6 +763,7 @@ function compile(text) {
         for (const vName in p.perVoice) {
           const voice = song.voiceMap[vName];
           const vi = vIndex[vName];
+          let prev = lastMidi[vi]; // musicbox: a `~` slides from this voice's previous note, even inside the pattern
           for (const e of p.perVoice[vName]) {
             if (e.step >= total) continue;
             const t0 = timeOf(e.step);
@@ -772,7 +773,8 @@ function compile(text) {
               if (e.pick) ev.pick = e.pick.map(o => o.map(n => n + voice.trans + ref.trans)); // musicbox: the player picks one
               else ev.m = e.notes.map(n => n + voice.trans + ref.trans);
               ev.d = Math.max(0.02, d * voice.gate);
-              if (e.glide && lastMidi[vi] != null) ev.g = lastMidi[vi] + 0;
+              if (e.glide && prev != null) ev.g = prev + 0;
+              if (ev.m && ev.m.length) prev = ev.m[ev.m.length - 1];
             }
             evs.push(ev);
           }

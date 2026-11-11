@@ -9,6 +9,7 @@ The most common mistake is a bar with the wrong number of steps. Count every bar
 ## How to work
 
 - **In this repository:** write the score to `scores/<set>/<name>.scrim`, then run `npm run check -- <file>`. Fix every error, act on the warnings, and read the analysis before you call the score done. The user listens in the editor (`npm run dev`).
+- **In another project:** check with `npx -y github:andre-larsson/musicbox check FILE.scrim`, then give the user a link that opens the score in the online editor, ready to play: `npx -y github:andre-larsson/musicbox link FILE.scrim`. If the user sends a link back with edits, `link --decode LINK` prints its score.
 - **In a chat:** reply with one complete score in a single fenced code block, followed by no more than a couple of sentences. If error messages are pasted back, fix the lines they point to and reply with the whole corrected score.
 
 Use only the keywords, instruments, chord names and symbols described here.

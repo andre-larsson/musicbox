@@ -1,12 +1,13 @@
 import { MusicPlayer } from '../src/player.js';
 import { compile } from '../src/score.js';
 import { analyze } from '../src/analyze.js';
+import { scoreLink, scoreCode, decodeScore } from '../src/link.js';
 
 const $ = s => document.querySelector(s);
 const ui = {
   file: $('#file'), play: $('#play'), stop: $('#stop'), cues: $('#cues'), intensity: $('#intensity'),
   intensityVal: $('#intensityVal'), volume: $('#volume'), status: $('#status'), score: $('#score'),
-  problems: $('#problems'), analysis: $('#analysis'), note: $('#note'), hint: $('#hint')
+  problems: $('#problems'), analysis: $('#analysis'), note: $('#note'), hint: $('#hint'), share: $('#share')
 };
 
 const player = new MusicPlayer({ volume: +ui.volume.value });
@@ -81,8 +82,10 @@ async function openFile(path, reason) {
   if (!res.ok) { ui.note.textContent = `Can't load ${path} (${res.status})`; return; }
   current = path;
   ui.score.value = await res.text();
+  ui.file.value = path;
   const url = new URL(location.href);
   url.searchParams.set('score', path);
+  url.hash = '';
   history.replaceState(null, '', url);
   apply(reason || `Loaded ${path}`);
 }
@@ -102,6 +105,19 @@ async function listFiles() {
   return { files: [], dev: false };
 }
 
+// A listen link carries the whole score in the hash (#score=…); see src/link.js.
+async function openLink(code) {
+  let text;
+  try { text = await decodeScore(code); } catch { ui.note.textContent = "Can't read the score in this link. It may have been cut short when it was copied."; return false; }
+  current = null;
+  let o = ui.file.querySelector('option[data-link]');
+  if (!o) { o = document.createElement('option'); o.dataset.link = '1'; o.disabled = true; o.textContent = '(score from a link)'; ui.file.prepend(o); }
+  o.selected = true;
+  ui.score.value = text;
+  apply('Loaded the score from the link');
+  return true;
+}
+
 async function init() {
   let { files, dev } = await listFiles();
   if (!files.length) files = ['scores/demo/tide-caves.scrim'];
@@ -112,7 +128,9 @@ async function init() {
   const wanted = new URL(location.href).searchParams.get('score');
   const first = files.includes(wanted) ? wanted : (files.includes('scores/demo/tide-caves.scrim') ? 'scores/demo/tide-caves.scrim' : files[0]);
   ui.file.value = first;
-  await openFile(first);
+  const code = scoreCode(location.hash);
+  if (!code || !(await openLink(code))) await openFile(first);
+  addEventListener('hashchange', () => { const c = scoreCode(location.hash); if (c) openLink(c); });
 
   if (dev) try {
     const es = new EventSource('../__watch');
@@ -134,6 +152,12 @@ ui.play.onclick = async () => {
   player.play(player.target && playable.cues[player.target] ? player.target : playable.defaultCue, { intensity: +ui.intensity.value });
 };
 ui.stop.onclick = () => player.stop(0.4);
+ui.share.onclick = async () => {
+  const url = await scoreLink(ui.score.value, location.origin + location.pathname);
+  history.replaceState(null, '', url);
+  try { await navigator.clipboard.writeText(url); ui.note.textContent = 'Copied a link to this score (with any unapplied edits)'; }
+  catch { ui.note.textContent = 'The link to this score is in the address bar'; }
+};
 ui.intensity.oninput = () => {
   ui.intensityVal.textContent = ui.intensity.value;
   player.setIntensity(+ui.intensity.value);

@@ -102,7 +102,19 @@ What musicbox adds to Scrimshaw:
 
 1. Give the agent a brief: the scene, mood, cues, what each intensity level should add, and how cues hand over.
 2. The agent follows [docs/PROMPT.md](docs/PROMPT.md), writes `scores/…/name.scrim`, and runs `npm run check` until there are no errors. Then it reads the analysis: ranges, strong-beat notes outside the chord, notes outside the key.
-3. You listen in the editor, try the cues and intensity levels, and give notes in musical terms ("bar 5 of B stalls", "combat needs more low end"). The agent revises one pattern at a time.
+3. The agent gives you a listen link (`musicbox link FILE.scrim`). It opens the score in the editor, ready to play. You try the cues and intensity levels and give notes in musical terms ("bar 5 of B stalls", "combat needs more low end"). The agent revises one pattern at a time.
+
+## Listen links
+
+A listen link carries a whole score in its hash (`#score=…`), compressed. Nothing is uploaded; the page decodes it in the browser. Agents in any project can use the checker and the links without installing anything:
+
+```sh
+npx -y github:andre-larsson/musicbox check music/theme.scrim
+npx -y github:andre-larsson/musicbox link music/theme.scrim         # prints https://a403.space/musicbox/editor/#score=…
+npx -y github:andre-larsson/musicbox link --decode 'https://…'     # the score inside a link
+```
+
+In the editor, **Copy link** makes a link to the score as it stands, including your edits, so you can send changes back to the agent.
 
 ## Layout
 
@@ -112,9 +124,10 @@ src/synth.js     Web Audio instruments and effects
 src/player.js    runtime player: scheduling, cues, transitions, layers, beds, events
 src/random.js    seeded dice: random notes, chance, jitter, pattern choices
 src/analyze.js   text report used by the checker and the editor
-bin/musicbox.js  `musicbox check`
+bin/musicbox.js  `musicbox check` and `musicbox link`
 bin/serve.js     dev server with live reload; --static serves a build
 bin/build.js     builds the static site into dist/
+src/link.js      listen links: a score inside a URL
 editor/          the editor page
 scores/          demo/ (musicbox features) and scrimshaw/ (the upstream examples, used as regression fixtures)
 docs/PROMPT.md   format reference and composing guide

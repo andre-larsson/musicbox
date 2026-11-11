@@ -24,7 +24,7 @@ export const RANGES = {
   timpani: [38, 60], marimba: [45, 96], vibes: [53, 89], xylophone: [65, 108], glock: [79, 108],
   celesta: [60, 108], musicbox: [60, 96], bell: [55, 96], steeldrum: [55, 88],
   choir: [40, 81], voices: [40, 81], accordion: [41, 93], harpsichord: [29, 89],
-  organ: [24, 96], pipe: [24, 96]
+  organ: [24, 96], pipe: [24, 96], piano: [21, 108]
 };
 
 const fmtSec = s => s.toFixed(1) + ' s';

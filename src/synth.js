@@ -159,6 +159,59 @@ const PLUCK = {
   upright: { id: 'upr', b: .5, decay: .996, color: .7, dur: 1.7, hang: .04, dampTau: .07 }
 };
 
+/* ----------------------------------- musicbox: piano (additive, one buffer per key) */
+// Stiff strings make each partial a little sharp; a hammer struck about a seventh of the way
+// along the string weakens the 7th and 8th partials; two strings per key, a fraction of a cent
+// apart, beat slowly; higher partials die away first, and the tone decays in two stages.
+function pianoTone(S, f) {
+  const key = Math.round(12 * Math.log2(f / 440) + 69);
+  const id = 'pno:' + key;
+  if (S.ks[id]) return S.ks[id];
+  const sr = S.ctx.sampleRate, f0 = 440 * Math.pow(2, (key - 69) / 12);
+  const dur = clamp(4.6 * Math.pow(262 / f0, 0.45), 1.6, 7);
+  const len = Math.floor(sr * dur);
+  const buf = S.ctx.createBuffer(1, len, sr), y = buf.getChannelData(0);
+  const B = clamp(0.00013 * Math.pow(f0 / 130, 0.75), 0.00005, 0.0025);
+  const tau = clamp(1.4 * Math.pow(262 / f0, 0.6), 0.22, 4);
+  const top = Math.min(S.nyq * 0.85, 11000);
+  let seed = key * 7919 + 13;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let n = 1; n <= 40; n++) {
+    const fn = n * f0 * Math.sqrt(1 + B * n * n);
+    if (fn > top) break;
+    let a = Math.pow(n, -0.95) * (0.18 + 0.82 * Math.abs(Math.sin(Math.PI * n / 7.3)));
+    a /= 1 + Math.pow(fn / 3800, 2);
+    if (a < 0.004) continue;
+    const tn = tau / (1 + 0.2 * (n - 1));
+    const strings = n <= 14 ? [-1, 1] : [0];
+    const cents = 0.25 + 0.45 * rnd();
+    for (const s of strings) {
+      const w = 2 * Math.PI * fn * Math.pow(2, s * cents / 1200) / sr;
+      const c2 = 2 * Math.cos(w), ph = rnd() * 2 * Math.PI, amp = a / strings.length;
+      let y1 = Math.sin(ph - w), y2 = Math.sin(ph - 2 * w);
+      const kf = Math.exp(-1 / (sr * tn)), ks2 = Math.exp(-1 / (sr * tn * 4.5));
+      let ef = 0.78 * amp, es = 0.22 * amp;
+      for (let i = 0; i < len; i++) {
+        const x = c2 * y1 - y2; y2 = y1; y1 = x;
+        y[i] += x * (ef + es); ef *= kf; es *= ks2;
+        if (ef + es < 1e-5) break;
+      }
+    }
+  }
+  // the hammer's knock: a short burst of low-passed noise
+  let lp = 0;
+  const knock = Math.floor(sr * 0.03), kc = clamp(f0 * 4 / sr, 0.02, 0.5);
+  for (let i = 0; i < knock; i++) { lp += kc * ((rnd() * 2 - 1) - lp); y[i] += lp * 0.5 * Math.exp(-i / (sr * 0.006)); }
+  const att = Math.floor(sr * 0.0015);
+  for (let i = 0; i < att; i++) y[i] *= i / att;
+  let pw = 0; const win = Math.min(len, Math.floor(sr * 0.3));
+  for (let i = 0; i < win; i++) pw += y[i] * y[i];
+  const g = 0.3 * Math.pow(262 / f0, 0.12) / Math.sqrt(pw / win + 1e-12);
+  const fade = Math.floor(len * 0.25);
+  for (let i = 0; i < len; i++) { y[i] *= g; if (i >= len - fade) { const k = (i - len + fade) / fade; y[i] *= (1 - k) * (1 - k); } }
+  return (S.ks[id] = { buf, f0 });
+}
+
 /* ------------------------------------------------------------ instruments */
 // play(S, out, t, dur, freq, vel, p) ; p = {from, glide, bright, att, rel}
 const INST = {
@@ -218,6 +271,22 @@ const INST = {
     [[.5, .35, 3.5], [1, 1, 2.4], [1.19, .55, 1.7], [1.5, .38, 1.4], [2, .45, 1.1], [2.52, .22, .8], [3.01, .16, .55], [4.1, .08, .35]]
       .forEach(([r, a, tau]) => partial(S, out, t, f * r, { a: .002, tau, peak: v * a * .35, damp, dampTau: .4 }));
     noise(S, out, t, { f: f * 4, q: 1, tau: .01, peak: v * .05 });
+  } },
+  piano: { rev: 0.3, level: 1, play(S, out, t, d, f, v, p) { // musicbox
+    const e = pianoTone(S, f);
+    const src = S.ctx.createBufferSource(); src.buffer = e.buf;
+    const rate = f / e.f0;
+    if (p.from) {
+      src.playbackRate.setValueAtTime(p.from / e.f0, t);
+      src.playbackRate.exponentialRampToValueAtTime(rate, t + p.glide);
+    } else src.playbackRate.value = rate;
+    const vv = clamp(v, 0.05, 1.4);
+    const lp = F(S, 'lowpass', clamp(f * 1.5 + (600 + 5600 * vv * vv) * p.bright, 300, 16000), 0.5);
+    const g = G(S);
+    const dampTau = p.rel ? p.rel / 4 : clamp(0.05 * Math.pow(262 / f, 0.5), 0.025, 0.14);
+    const end = perc(g.gain, t, { a: 0.001, tau: 60, peak: v * 0.5, damp: t + d, dampTau });
+    src.connect(lp).connect(g).connect(out);
+    src.start(t); src.stop(Math.min(end, t + e.buf.duration / rate));
   } },
   organ: { rev: 0.15, level: 0.98, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', 5500 * p.bright, 0.5);
@@ -661,7 +730,7 @@ function createSynth(ctx, dest, opts = {}) {
     warm(song, budgetMs = 12) {
       const todo = [];
       song.voices.forEach((v, vi) => {
-        const cfg = PLUCK[v.inst]; if (!cfg) return;
+        const cfg = PLUCK[v.inst] || (v.inst === 'piano' ? 'piano' : null); if (!cfg) return; // musicbox: piano
         const seen = new Set();
         // musicbox: warm every cue and transition, not just the default cue
         const tls = song.cues
@@ -677,7 +746,7 @@ function createSynth(ctx, dest, opts = {}) {
       let i = 0;
       const step = () => {
         const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
-        while (i < todo.length && (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0 < budgetMs) { ks(S, todo[i][0], todo[i][1]); i++; }
+        while (i < todo.length && (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0 < budgetMs) { if (todo[i][1] === 'piano') pianoTone(S, todo[i][0]); else ks(S, todo[i][0], todo[i][1]); i++; }
         if (i < todo.length) setTimeout(step, 15);
       };
       step();

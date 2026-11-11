@@ -9,7 +9,7 @@ const MELODIC = ['steeldrum', 'marimba', 'vibes', 'celesta', 'glock', 'xylophone
   'organ', 'pipe', 'strings', 'pad', 'choir', 'voices', 'brass', 'trumpet', 'horn', 'tuba',
   'flute', 'clarinet', 'oboe', 'bassoon', 'accordion', 'fiddle',
   'harp', 'guitar', 'banjo', 'harpsichord', 'pizz', 'upright', 'fretless', 'synbass', 'timpani',
-  'chip', 'sine', 'square', 'saw', 'triangle'];
+  'chip', 'sine', 'square', 'saw', 'triangle', 'piano']; // musicbox: piano
 const DRUMS = ['kick', 'snare', 'rim', 'hat', 'ohat', 'ride', 'crash', 'shaker', 'tamb',
   'conga', 'tumba', 'bongo', 'bongolo', 'clave', 'block', 'cowbell', 'guiro',
   'tomlo', 'tommid', 'tomhi', 'bodhran', 'timbale', 'tri', 'clap', 'gong', 'thunder', 'surf'];

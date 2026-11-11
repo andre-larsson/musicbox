@@ -95,7 +95,7 @@ Voice options:
 Melodic instruments:
 
 - Mallets and bells: steeldrum marimba vibes celesta glock xylophone musicbox bell
-- Keyboards: organ pipe harpsichord
+- Keyboards: piano organ pipe harpsichord
 - Strings: strings pizz fiddle harp guitar banjo upright
 - Winds and brass: flute clarinet oboe bassoon accordion trumpet brass horn tuba
 - Voices and pads: choir voices pad
@@ -108,7 +108,7 @@ Drum instruments, one sound per voice:
 - Hand percussion: conga tumba bongo bongolo timbale bodhran shaker tamb clave block cowbell guiro tri
 - Toms and effects: tomlo tommid tomhi gong thunder surf
 
-Some of these names are short. `pipe` is a pipe organ, `pizz` is pizzicato strings, `upright` is an upright bass, and `chip` is a square-wave game console lead. `ohat` is an open hi-hat, `tamb` a tambourine, and `tri` a triangle. `thunder` is a long thunder roll and `surf` is a wave breaking on a beach; both last several seconds.
+A `piano` note rings until its written length ends, like a key held down, so give notes their full length (`:N`) where a pianist would hold them or use the pedal. Some of these names are short. `pipe` is a pipe organ, `pizz` is pizzicato strings, `upright` is an upright bass, and `chip` is a square-wave game console lead. `ohat` is an open hi-hat, `tamb` a tambourine, and `tri` a triangle. `thunder` is a long thunder roll and `surf` is a wave breaking on a beach; both last several seconds.
 
 ## Patterns
 

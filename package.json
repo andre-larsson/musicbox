@@ -1,0 +1,28 @@
+{
+  "name": "musicbox",
+  "version": "0.1.0",
+  "description": "Text score format and Web Audio player for adaptive browser game music, forked from Scrimshaw",
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.js",
+    "./score": "./src/score.js",
+    "./synth": "./src/synth.js",
+    "./player": "./src/player.js"
+  },
+  "bin": {
+    "musicbox": "./bin/musicbox.js"
+  },
+  "scripts": {
+    "check": "node bin/musicbox.js check",
+    "dev": "node bin/serve.js",
+    "build": "node bin/build.js",
+    "preview": "node bin/build.js && node bin/serve.js --static dist",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andre-larsson/musicbox.git"
+  },
+  "homepage": "https://a403.space/musicbox/"
+}

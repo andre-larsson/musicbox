@@ -1,0 +1,48 @@
+title    Lantern Waltz
+composer Claude
+about    A slow waltz on the governor's balcony. Vibraphone, oboe and a guitar keeping time in three.
+tempo    96
+beats    3            # 3/4
+steps    2            # eighth-note grid: 6 steps to the bar
+reverb   0.4
+
+voice vibes   vibes    vol=1.1 pan=-0.15
+voice oboe    oboe     vol=0.7  pan=0.25
+voice mbox    musicbox vol=0.7  pan=0.1
+voice celesta celesta  vol=0.45 pan=0.4
+voice harp    harp     vol=0.6  pan=-0.4
+voice gtr     guitar   vol=0.8  pan=0.3  center=A4 gate=0.8
+voice strings strings  vol=0.35 pan=-0.2 center=F4
+voice bass    upright  vol=0.85
+
+pattern intro
+mbox | A4- C5- F5- | A5--- G5- | F5- D5- Bb4- | C5----- |
+harp | F3 C4 F4 A4 C5 F5 | D3 A3 D4 F4 A4 D5 | Bb2 F3 Bb3 D4 F4 Bb4 | C3 G3 Bb3 E4 G4 C5 |
+
+pattern A
+vibes   | A4- C5- F5- | A5--- G5- | F5- D5- Bb4- | C5----- | A4- C5- F5- | C6--- A5- | Bb5- G5- D5- | E5----- |
+vibes   | A4- C5- F5- | A5--- G5- | D5- F5- Bb5- | Bb5--- G5- | C6- A5- F5- | D6--- Bb5- | C6- Bb5- G5- | F5----- |
+gtr     | . . [F]- [F]- | . . [Dm]- [Dm]- | . . [Bb]- [Bb]- | . . [C]- [C]- | . . [F]- [F]- | . . [Am]- [Am]- | . . [Gm7]- [Gm7]- | . . [C7]- [C7]- |
+gtr     | . . [F]- [F]- | . . [Dm]- [Dm]- | . . [Bb]- [Bb]- | . . [C7]- [C7]- | . . [F]- [F]- | . . [Bb]- [Bb]- | . . [C7]- [C7]- | . . [F]- [F]- |
+bass    | F2- . . . . | D2- . . . . | Bb1- . . . . | C2- . . G2- | F2- . . . . | A1- . . . . | G1- . . . . | C2- . . E2- |
+bass    | F2- . . . . | D2- . . . . | Bb1- . . . . | C2- . . . . | A1- . . . . | Bb1- . . . . | C2- . . . . | F2- . . C2- |
+strings | [F]?----- | [Dm]?----- | [Bb]?----- | [C]?----- | [F]?----- | [Am]?----- | [Gm7]?----- | [C7]?----- |
+strings | [F]?----- | [Dm]?----- | [Bb]?----- | [C7]?----- | [F]?----- | [Bb]?----- | [C7]?----- | [F]?----- |
+
+pattern B
+oboe    | F5--- E5- | D5--- Bb4- | C#5- E5- G5- | F5----- | D5--- F5- | Bb5--- G5- | F5--- Db5- | E5--- C5- |
+harp    | D3 A3 D4 F4 A4 D5 | G2 D3 G3 Bb3 D4 G4 | A2 E3 G3 C#4 E4 G4 | D3 A3 D4 F4 A4 D5 |
+harp    | Bb2 F3 Bb3 D4 F4 Bb4 | G2 D3 G3 Bb3 D4 G4 | Bb2 F3 Bb3 Db4 F4 Bb4 | C3 G3 Bb3 E4 G4 C5 |
+gtr     | . . [Dm]- [Dm]- | . . [Gm]- [Gm]- | . . [A7]- [A7]- | . . [Dm]- [Dm]- | . . [Bb]- [Bb]- | . . [Gm]- [Gm]- | . . [Bbm]- [Bbm]- | . . [C7]- [C7]- |
+bass    | D2- . . . . | G1- . . . . | A1- . . . . | D2- . . . . | Bb1- . . . . | G1- . . . . | Bb1- . . . . | C2- . . . . |
+strings | [Dm]----- | [Gm]----- | [A7]----- | [Dm]----- | [Bb]----- | [Gm]----- | [Bbm]----- | [C7]----- |
+
+# the tune again, with the oboe a third below and a celesta shadowing it
+pattern A2 from A
+oboe    | F4- A4- C5- | F5--- D5- | D5- Bb4- F4- | G4----- | F4- A4- C5- | E5--- C5- | G5- D5- Bb4- | C5--- Bb4- |
+oboe    | F4- A4- C5- | F5--- D5- | Bb4- D5- F5- | G5--- E5- | A5- F5- C5- | F5--- D5- | G5- E5- Bb4- | A4----- |
+celesta | A5- C6- F6- | A6--- G6- | F6- D6- Bb5- | C6----- | A5- C6- F6- | C7--- A6- | Bb6- G6- D6- | E6----- |
+celesta | A5- C6- F6- | A6--- G6- | D6- F6- Bb6- | Bb6--- G6- | C7- A6- F6- | D7--- Bb6- | C7- Bb6- G6- | F6----- |
+
+play intro
+loop A B A2 B

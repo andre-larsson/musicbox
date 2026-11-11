@@ -1,0 +1,55 @@
+title  Night Ferry
+about  A tour of musicbox's random parts: arpeggiators, random notes, chance, pattern choices, and beds that carry on across cues.
+tempo  84
+beats  4
+steps  4
+reverb 0.45
+key    E minor
+
+# beds run under every cue; each cue's beds line sets which ones play, and how loud
+bed   water  sea    vol=0.6
+bed   gust   wind   vol=0.5  layer=1
+bed   hum    drone  vol=0.35 note=E2
+
+voice harp    harp      vol=0.7  center=E4 arp=updown rate=2 span=2 pan=-0.2
+voice pad     pad       vol=0.35 center=G4 att=1.5 rel=2.5
+voice bell    celesta   vol=0.5  center=E5 chance=0.6 jitter=0.04 pan=0.3 rev=0.6
+voice bass    fretless  vol=0.7
+voice tick    shaker    vol=0.3  chance=0.8 layer=1
+voice kalim   marimba   vol=0.45 center=E5 arp=random rate=4 span=2 pan=0.25 layer=1
+
+pattern A
+harmony | Em | Cmaj7 | G | D/F# |
+harp    | [*]:16 | % | % | % |
+pad     | [*]:16 | % | % | % |
+bell    | {chord}:4 .:4 {chord}:8 | % | % | % |
+bass    | E2:16 | C2:16 | G1:16 | F#1:16 |
+tick    | ..x. ..x. ..x. ..xx | % | % | % |
+kalim   | [*]:16 | % | % | % |
+
+pattern B from A
+harmony | Am7 | Em | Cmaj7 | B7 |
+bass    | A1:16 | E2:16 | C2:16 | B1:16 |
+bell    | {E5 G5 B5 .}:4 {scale}:4 .:8 | {E5 G5 B5 .}:4 {chord}:4 .:8 | {E5 G5 B5 .}:4 {scale}:4 .:8 | {D#5 F#5 A5}:8 .:8 |
+
+pattern C from A
+harmony | Cmaj7 | D | Em | Em |
+bass    | C2:16 | D2:16 | E2:16 | = |
+
+pattern S tempo=96
+harmony | Em | C | Am | B7 |
+harp    | [*]:16 | % | % | % |
+bass    | E2:8 E2:8 | C2:8 C2:8 | A1:8 A1:8 | B1:8 B1:8 |
+bell    | {chord}:2 {chord}:2 .:4 {chord}:4 .:4 | % | % | % |
+tick    | x.x. x.x. x.x. x.xx | % | % | % |
+kalim   | [*]:16 | % | % | % |
+
+cue night
+loop A {B C}
+beds water hum
+
+cue storm
+loop S {A S S}
+beds water=0.6 gust=1.4 hum
+
+switch * -> * at bar fade 1.5

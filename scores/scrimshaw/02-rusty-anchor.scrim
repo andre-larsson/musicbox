@@ -1,0 +1,67 @@
+title    The Rusty Anchor
+composer Claude
+about    Tavern jig in 6/8. Accordion, clarinet and a fiddler who has had two grogs too many.
+tempo    112          # dotted-quarter beats
+beats    2            # two beats to the bar...
+steps    3            # ...each split in three: 6/8
+reverb   0.22
+
+voice acc    accordion vol=0.85 pan=-0.2
+voice clar   clarinet  vol=0.75 pan=0.3
+voice fiddle fiddle    vol=0.65 pan=0.4
+voice gtr    guitar    vol=0.75 pan=0.2  center=E4
+voice bass   upright   vol=0.95
+voice bod    bodhran   vol=0.5 pan=-0.1
+voice tamb   tamb      vol=0.65  pan=0.45
+voice ding   tri       vol=0.4  pan=-0.5
+
+pattern intro
+gtr  | . . [Em] . . [Em] | % | % | . . [Em] . . [B7] |
+bass | E2- . B1- . | % | % | E2- . B1- . |
+bod  | Xox Xox | % | % | Xox XxX |
+tamb | _ | _ | x.o x.o | x.o xxx |
+
+pattern A
+acc  | E5 B4 E5 G5 F#5 E5 | D5 A4 D5 F#5 E5 D5 | E5 B4 E5 G5- A5 | B5 A5 F#5 D5- A4 |
+acc  | E5 B4 E5 G5 F#5 E5 | D5 A4 D5 F#5 E5 D5 | C5 E5 G5 D5 F#5 A5 | B5 A5 F#5 E5-- |
+gtr  | . . [Em] . . [Em] | . . [D] . . [D] | . . [Em] . . [Em] | . . [D] . . [D] |
+gtr  | . . [Em] . . [Em] | . . [D] . . [D] | . . [C] . . [D] | . . [Em] . . [Em] |
+bass | E2- . B1- . | D2- . A1- . | E2- . B1- . | D2- . A1- . |
+bass | E2- . B1- . | D2- . A1- . | C2- . D2- . | E2- . B1- . |
+bod  | Xox Xox | % | % | % | % | % | % | Xox XXx |
+tamb | x.o x.o | % | % | % | % | % | % | % |
+ding | _ | _ | _ | _ | _ | _ | _ | . . . x . . |
+
+pattern A2 from A
+clar | G4-- B4-- | F#4-- A4-- | G4----- | F#4----- | G4-- B4-- | A4-- F#4-- | G4-- A4-- | G4----- |
+
+pattern B
+acc  | G5- B5 D6 B5 G5 | F#5- A5 D6 A5 F#5 | E5- G5 C6 B5 A5 | B5 A5 G5 F#5 E5 D5 |
+acc  | G5- B5 D6 B5 G5 | F#5- A5 D6 C#6 D6 | E6 D6 C6 B5 A5 F#5 | E5- B4 E5-- |
+clar | B4- D5 G5 D5 B4 | A4- D5 F#5 D5 A4 | G4- C5 E5 D5 C5 | G5 F#5 E5 D5 A4 F#4 |
+clar | B4- D5 G5 D5 B4 | A4- D5 F#5 E5 F#5 | C6 B5 A5 G5 F#5 D5 | B4- G4 B4-- |
+gtr  | . . [G] . . [G] | . . [D] . . [D] | . . [C] . . [C] | . . [D] . . [D] |
+gtr  | . . [G] . . [G] | . . [D] . . [D] | . . [C] . . [D] | . . [Em] . . [Em] |
+bass | G1- . D2- . | D2- . A1- . | C2- . G1- . | D2- . A1- . |
+bass | G1- . D2- . | D2- . A1- . | C2- . D2- . | E2- . B1- . |
+bod  | Xox Xox | % | % | % | % | % | % | XxX Xxx |
+tamb | x.o x.o | % | % | % | % | % | % | % |
+
+pattern B2 from B
+fiddle | G5- B5 D6 B5 G5 | F#5- A5 D6 A5 F#5 | E5- G5 C6 B5 A5 | B5 A5 G5 F#5 E5 D5 |
+fiddle | G5- B5 D6 B5 G5 | F#5- A5 D6 C#6 D6 | E6 D6 C6 B5 A5 F#5 | E5- B4 E5-- |
+ding   | _ | _ | _ | _ | _ | _ | _ | . . . x . . |
+
+# the clarinet gets a turn while everyone else catches their breath
+pattern C
+clar | A4 C5 E5 A5- E5 | G5 F#5 E5 B4-- | A4 C5 E5 A5 B5 C6 | B5 A5 F#5 D#5-- |
+clar | C6 B5 A5 E5 C5 A4 | B4 E5 G5 B5-- | A5 F#5 D#5 B4 C5 D#5 | E5-- . . . |
+acc  | . . [Am] . . [Am] | . . [Em] . . [Em] | . . [Am] . . [Am] | . . [B7] . . [B7] |
+acc  | . . [Am] . . [Am] | . . [Em] . . [Em] | . . [B7] . . [B7] | . . [Em] . [Em] [Em] |
+bass | A1- . E2- . | E2- . B1- . | A1- . C2- E2 | B1- . F#1- . |
+bass | A1- . E2- . | E2- . G2- . | B1- . A1 F#1 D#1 | E1- . E2 B1 D#2 |
+bod  | X.. x.. | % | % | % | % | % | % | X.x XxX |
+tamb | _ | _ | _ | _ | x.. x.. | % | % | x.x xxx |
+
+play intro
+loop A A2 B B2 C A2

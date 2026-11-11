@@ -1,0 +1,71 @@
+title    Duel on the Docks
+composer Claude
+about    Swordfight music. Harpsichord, trumpet and pizzicato at a gallop, with a short standoff in the middle.
+tempo    152
+beats    4
+steps    2            # eighth-note grid: 8 steps to the bar
+reverb   0.25
+
+voice trumpet trumpet     vol=0.85 pan=-0.1
+voice hpsi    harpsichord vol=1.1 pan=0.35
+voice xylo    xylophone   vol=0.6  pan=-0.35
+voice brass   brass       vol=0.6  pan=0.15 center=G4
+voice strings strings     vol=0.45 pan=-0.25 center=D5 att=0.08
+voice pizz    pizz        vol=0.9  pan=0.2
+voice bassoon bassoon     vol=0.75 pan=0.1
+voice timp    timpani     vol=0.8
+voice snare   snare       vol=0.5  pan=0.1
+voice kick    kick        vol=0.6
+voice tamb    tamb        vol=0.4  pan=0.4
+voice crash   crash       vol=0.35 pan=-0.2
+
+# the intro switches to a sixteenth-note grid for the snare roll
+pattern intro steps=4
+timp  | G2!--- . . . . D2--- . . . . | G2!--- D2--- G2--- D2! . . . |
+snare | o.o. o.o. o.o. oooo | oooo oooo xxxx XXXX |
+brass | _ | . . . . . . . . . . . . [D]!--- |
+
+pattern A
+trumpet | D5- G5- Bb5-- A5 | G5 F#5 G5 A5 Bb5- A5 G5 | G5--- Eb5- G5- | F#5----- . . |
+trumpet | D5- G5- Bb5- D6- | C6- Bb5 A5 G5- Eb5- | D5 E5 F#5 G5 A5 Bb5 C6 A5 | D6--- . . . . |
+hpsi    | G4 Bb4 D5 Bb4 G4 Bb4 D5 Bb4 | % | G4 Bb4 Eb5 Bb4 G4 Bb4 Eb5 Bb4 | F#4 A4 D5 A4 F#4 A4 D5 A4 |
+hpsi    | G4 Bb4 D5 Bb4 G4 Bb4 D5 Bb4 | G4 C5 Eb5 C5 G4 C5 Eb5 C5 | F#4 A4 D5 A4 F#4 A4 C5 A4 | F#4 A4 C5 A4 F#4 A4 C5 D5 |
+pizz    | G2 G3 D3 G3 G2 G3 D3 G3 | % | Eb2 Eb3 Bb2 Eb3 Eb2 Eb3 Bb2 Eb3 | D2 D3 A2 D3 D2 D3 A2 D3 |
+pizz    | G2 G3 D3 G3 G2 G3 D3 G3 | C2 C3 G2 C3 C2 C3 G2 C3 | D2 D3 A2 D3 D2 D3 A2 D3 | D2 D3 A2 C3 D2 D3 F#2 A2 |
+brass   | [Gm]!- . . . . . . | _ | [Eb]- . . . . . . | . . . . [D]! . [D]! . |
+brass   | [Gm]!- . . . . . . | [Cm]- . . . . . . | _ | . . . . [D7]! . [D7]! [D7]! |
+timp    | G2!- . . . . . . | _ | _ | D2!- . . D2- D2- | G2!- . . . . . . | _ | _ | D2!- . . D2 D2 D2! D2! |
+snare   | ..x.o.xo | % | % | % | % | % | % | ..x.xxXX |
+kick    | x...x... | % | % | % | % | % | % | % |
+tamb    | .x.x.x.x | % | % | % | % | % | % | % |
+crash   | X....... | _ | _ | _ | _ | _ | _ | _ |
+
+pattern A2 from A
+xylo    | D5- G5- Bb5-- A5 | G5 F#5 G5 A5 Bb5- A5 G5 | G5--- Eb5- G5- | F#5----- . . |
+xylo    | D5- G5- Bb5- D6- | C6- Bb5 A5 G5- Eb5- | D5 E5 F#5 G5 A5 Bb5 C6 A5 | D6--- . . . . |
+strings | [Gm]------- | [Gm]------- | [Eb]------- | [D]------- | [Gm]------- | [Cm]------- | [D]------- | [D7]------- |
+
+pattern B
+hpsi    | D5 F5 Bb5 F5 D5 F5 Bb5 C6 | A5 F5 C5 F5 A5 C6 A5 F5 | G5 D5 Bb4 D5 G5 A5 Bb5 G5 | F#5 D5 A4 D5 F#5 A5 C6 A5 |
+hpsi    | G5 Eb5 Bb4 Eb5 G5 Bb5 G5 Eb5 | F5 D5 Bb4 D5 F5 Bb5 F5 D5 | Eb5 G5 C6 G5 F#5 A5 D6 C6 | Bb5 A5 G5 F#5 G5--- |
+trumpet | F5------- | = | G5------- | F#5------- | G5------- | F5------- | G5--- F#5--- | G5------- |
+brass   | [Bb]------- | [F]------- | [Gm]------- | [D]------- | [Eb]------- | [Bb]------- | [Cm]--- [D]--- | [Gm]------- |
+pizz    | Bb1 Bb2 F2 Bb2 Bb1 Bb2 F2 Bb2 | F2 F3 C3 F3 F2 F3 C3 F3 | G2 G3 D3 G3 G2 G3 D3 G3 | D2 D3 A2 D3 D2 D3 A2 D3 |
+pizz    | Eb2 Eb3 Bb2 Eb3 Eb2 Eb3 Bb2 Eb3 | Bb1 Bb2 F2 Bb2 Bb1 Bb2 F2 Bb2 | C2 C3 G2 C3 D2 D3 A2 D3 | G2 G3 D3 G3 G2 . D2 F#2 |
+timp    | _ | _ | _ | D2!- . . . . . . | _ | _ | _ | G2 G2 G2 G2 D2 D2 D2! D2! |
+snare   | ..x.o.xo | % | % | % | % | % | % | ..x.xxXX |
+kick    | x...x... | % | % | % | % | % | % | % |
+tamb    | .x.x.x.x | % | % | % | % | % | % | % |
+crash   | X....... | _ | _ | _ | _ | _ | _ | _ |
+
+# the standoff: both duellists circle, nobody blinks
+pattern C
+bassoon | G2--- Bb2--- | Eb3--- D3--- | C3--- Eb3--- | D3- C3- Bb2- A2- |
+pizz    | G2 . D3 . G2 . D3 . | Eb2 . Bb2 . Eb2 . Bb2 . | C2 . G2 . C2 . G2 . | D2 . A2 . D2 . F#2 . |
+xylo    | . . G5 . . . Bb5 . | . . G5 . . . Eb6 . | . . G5 . . . C6 . | . . F#5 . A5 . C6 . |
+timp    | G2 . . . D2 . . . | Eb2 . . . Bb2 . . . | C2 . . . G2 . . . | D2 . D2 . D2 D2 D2! D2! |
+kick    | x....... | % | % | % |
+tamb    | ...x...x | % | % | x.x.xxxx |
+
+play intro
+loop A A2 B C A2 B

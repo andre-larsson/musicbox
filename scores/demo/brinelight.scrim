@@ -1,0 +1,61 @@
+title  Brinelight
+about  A port of Brinelight's generative score: a swelling pad and random plucks over the sea, in four moods. The plucks are rolled fresh every bar, as in the game.
+# Brinelight, the game: https://andre-larsson.github.io/brinelight/
+tempo  57        # a 4-beat bar lasts 4.2 s, like the game's calm mood
+beats  4
+steps  3         # 12 steps a bar, so 2, 3 and 4 plucks a bar all land on steps
+reverb 0.45
+key    A minor
+
+# The game plays each mood as: a pad chord and a bass note that swell and fade every bar,
+# a few plucks a bar (each sounds 70% of the time, on a random note from a set, up to
+# 0.2 s late), and in fights a low thump. Brown noise with a slow swell runs underneath.
+bed   sea    sea       vol=0.8
+voice pad    triangle  vol=0.55 center=C4 att=1.3 gate=0.35 rel=3.5 bright=0.15 rev=0.4
+voice bass   triangle  vol=0.6  att=1.3 gate=0.35 rel=3.5 bright=0.15
+voice pluck  sine      vol=0.55 att=0.01 gate=0.08 rel=1.5 chance=0.7 jitter=0.2 rev=0.5 pan=0.15
+voice thump  kick      vol=0.5
+
+pattern calm
+harmony | Am | F | C/E | G |
+pad     | [*]:12 | % | % | % |
+bass    | A2:12 | F2:12 | E2:12 | G2:12 |
+pluck   | {A4 C5 D5 E5 G5 A5}:6 {A4 C5 D5 E5 G5 A5}:6 | % | % | % |
+
+pattern fight tempo=86
+harmony | Am | G | F | E |
+pad     | [*]:12 | % | % | % |
+bass    | A2:12 | G2:12 | F2:12 | E2:12 |
+pluck   | {A4 C5 D5 E5 G5}:4 {A4 C5 D5 E5 G5}:4 {A4 C5 D5 E5 G5}:4 | % | % | % |
+thump   | x..... x..... | % | % | % |
+
+pattern boss tempo=92
+key     D minor
+harmony | Dm | C#dim | Bb | A |
+pad     | [*]:12 | % | % | % |
+bass    | D2:12 | C#2:12 | Bb1:12 | A1:12 |
+pluck   | {D4 F4 G4 A4 C5}:6 {D4 F4 G4 A4 C5}:6 | % | % | % |
+thump   | x..... x..... | % | % | % |
+
+pattern boss2 tempo=120
+key     D minor
+harmony | Dm | Bb | C | A |
+pad     | [*]:12 | % | % | % |
+bass    | D2:12 | Bb1:12 | C2:12 | A1:12 |
+pluck   | {D4 F4 G4 A4 C5 D5}:3 {D4 F4 G4 A4 C5 D5}:3 {D4 F4 G4 A4 C5 D5}:3 {D4 F4 G4 A4 C5 D5}:3 | % | % | % |
+thump   | x.. x.. x.. x.. | % | % | % |
+
+cue calm
+loop calm
+
+cue fight
+loop fight
+
+cue boss
+loop boss
+
+cue boss2
+loop boss2
+
+# like the game: a new mood starts on the next bar line while the old one rings out
+switch * -> * at bar fade 2

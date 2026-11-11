@@ -1,0 +1,111 @@
+title    Tide Caves
+composer musicbox demo
+about    Exploring sea caves at low tide. Higher intensity adds marimba and shaker, then drums and vibes. Combat brings war drums, pizzicato and brass.
+tempo    96
+beats    4
+steps    4        # 16 steps per bar
+swing    0.08
+reverb   0.4
+key      D dorian
+
+# layer 0 always plays; intensity 1 adds layer 1, intensity 2 adds layer 2
+voice lead    flute     vol=0.9  pan=-0.15
+voice pad     strings   vol=0.4  pan=0.2   center=E4 att=0.3
+voice bass    fretless  vol=0.85
+voice marimba marimba   vol=0.75 pan=0.35  layer=1
+voice shaker  shaker    vol=0.35 pan=-0.4  layer=1
+voice vibes   vibes     vol=0.55 pan=-0.3  layer=2
+voice kick    kick      vol=0.6            layer=2
+voice rim     rim       vol=0.35 pan=0.15  layer=2
+# combat
+voice trumpet trumpet   vol=0.85 pan=-0.1
+voice brass   brass     vol=0.6  pan=0.15  center=G4 layer=1
+voice pizz    pizz      vol=0.8  pan=0.25
+voice war     tomlo     vol=0.75
+voice snare   snare     vol=0.5  pan=0.1
+voice timp    timpani   vol=0.75           layer=1
+voice crash   crash     vol=0.3  pan=-0.2  layer=1
+
+# ------------------------------------------------------------- explore
+pattern intro
+harmony | Dm7 | G |
+pad     | [*]?:16 | % |
+bass    | D2:16 | G1:16 |
+marimba | D4- A4- F4- A4- C5- A4- F4- A4- | D4- G4- B4- G4- D5- B4- G4- B4- |
+
+pattern A
+harmony | Dm7 | G | Dm7 | G | Fmaj7 | C | Em7 | A7sus4 A7 |
+lead    | A4:4 D5:4 F5:6 E5:2 | D5:6 B4:2 G4:8 | A4:4 D5:4 F5:4 A5:4 | G5:6 F5:2 D5:8 |
+lead    | C5:4 E5:4 A5:6 G5:2 | G5:6 E5:2 C5:8 | B4:4 D5:4 E5:4 G5:4 | E5:8 C#5:4 A4:4 |
+pad     | [*]?:16 | % | % | % | % | % | % | [*]?:8 [*]?:8 |
+bass    | D2:6 A2:2 D3:4 C3:4 | G1:6 D2:2 G2:4 B1:4 | D2:6 A2:2 D3:4 F2:4 | G1:6 D2:2 G2:4 A2:4 |
+bass    | F1:6 C2:2 F2:4 E2:4 | C2:6 G2:2 C3:4 B1:4 | E2:6 B2:2 E2:4 G2:4 | A1:6 E2:2 A2:4 C#2:4 |
+marimba | D4- A4- F4- A4- C5- A4- F4- A4- | D4- G4- B4- G4- D5- B4- G4- B4- | D4- A4- F4- A4- C5- A4- F4- A4- | D4- G4- B4- G4- D5- B4- G4- B4- |
+marimba | C4- F4- A4- C5- E5- C5- A4- F4- | G3- C4- E4- G4- C5- G4- E4- C4- | B3- E4- G4- B4- D5- B4- G4- E4- | A3- D4- E4- G4- A3- C#4- E4- G4- |
+vibes   | C6:8 A5:8 | B5:8 D6:8 | C6:8 A5:8 | B5:16 | E6:8 C6:8 | G5:8 E6:8 | D6:8 B5:8 | E6:8 C#6:8 |
+shaker  | x.o. x.ox x.o. x.oo | % | % | % | % | % | % | % |
+kick    | x... .... x.x. .... | % | % | % | % | % | % | x... ..x. x.x. x.xx |
+rim     | .... x... .... x..o | % | % | % | % | % | % | % |
+
+pattern B
+harmony | Bbmaj7 | C | Am7 | Dm7 | Bbmaj7 | C | A7sus4 | A7 |
+lead    | F5:4 D5:4 A5:8 | G5:4 E5:4 C5:8 | E5:4 C5:4 A4:4 G4:4 | A4:12 .:4 |
+lead    | D5:4 F5:4 Bb5:6 A5:2 | G5:6 E5:2 G5:4 C6:4 | D6:6 E6:2 D6:8 | C#6:8 .:4 A5:4 |
+pad     | [*]?:16 | % | % | % | % | % | % | % |
+bass    | Bb1:6 F2:2 Bb2:4 A2:4 | C2:6 G2:2 C3:4 E2:4 | A1:6 E2:2 A2:4 G2:4 | D2:6 A2:2 D3:4 C3:4 |
+bass    | Bb1:6 F2:2 Bb2:4 A2:4 | C2:6 G2:2 C3:4 E2:4 | A1:6 E2:2 A2:4 G2:4 | A1:6 E2:2 A2:4 C#3:4 |
+marimba | Bb3- D4- F4- A4- D5- A4- F4- D4- | C4- E4- G4- C5- E5- C5- G4- E4- | A3- C4- E4- G4- C5- G4- E4- C4- | D4- F4- A4- C5- D5- C5- A4- F4- |
+marimba | Bb3- D4- F4- A4- D5- A4- F4- D4- | C4- E4- G4- C5- E5- C5- G4- E4- | A3- D4- E4- G4- D5- G4- E4- D4- | A3- C#4- E4- G4- C#5- G4- E4- C#4- |
+vibes   | A5:8 F5:8 | G5:8 E5:8 | C6:8 A5:8 | F5:16 | A5:8 D6:8 | E6:8 G5:8 | G5:16 | G5:8 E5:8 |
+shaker  | x.o. x.ox x.o. x.oo | % | % | % | % | % | % | % |
+kick    | x... .... x.x. .... | % | % | % | % | % | % | x... ..x. x.x. x.xx |
+rim     | .... x... .... x..o | % | % | % | % | % | % | % |
+
+# ------------------------------------------------------------- combat
+pattern C tempo=132 swing=0
+key     D minor
+harmony | Dm | Bb | C | A7 |
+pizz    | D3- D3- A3- D3- F3- D3- A3- D3- | Bb2- Bb2- F3- Bb2- D3- Bb2- F3- Bb2- | C3- C3- G3- C3- E3- C3- G3- C3- | A2- A2- E3- A2- C#3- A2- G3- A2- |
+bass    | D2:4 D2:4 D2:4 D2:4 | Bb1:4 Bb1:4 Bb1:4 Bb1:4 | C2:4 C2:4 C2:4 C2:4 | A1:4 A1:4 A1:4 C#2:4 |
+brass   | [*]!:2 .:6 [*]:2 .:2 [*]:4 | % | % | [*]!:2 .:2 [*]:2 .:2 [*]!:8 |
+war     | X... x.x. X... x.xx | % | % | X.x. X.x. XxXx XXXX |
+snare   | .... X... .... X..o | % | % | ..x. X..x .xX. XXXX |
+timp    | D2!:4 .:12 | F2!:4 .:12 | G2!:4 .:12 | A2!:4 .:4 A2- A2- A2!- A2!- |
+crash   | X... .... .... .... | _ | _ | _ |
+
+# C again with the trumpet tune on top
+pattern C2 from C
+trumpet | D5:6 F5:2 A5:8 | Bb5:6 A5:2 F5:8 | G5:6 E5:2 C5:4 E5:4 | A5:4 G5- F5- E5:4 C#5:4 |
+
+# one bar that bridges exploring into combat
+pattern hit tempo=132 swing=0
+key     D minor
+harmony | A7 |
+timp    | A2? A2? A2 A2 A2 A2 A2! A2! A2! A2! A2!! A2!! A2!!--- |
+brass   | .:12 [*]!!:4 |
+snare   | oooo oooo xxxx XXXX |
+
+# ------------------------------------------------------------- victory
+pattern fanfare
+harmony | Bb C | D |
+trumpet | D5- F5- Bb5:4 C5- E5- G5:4 | D5:4 F#5:4 A5:8 |
+brass   | [*]!:8 [*]!:8 | [*]!:16 |
+bass    | Bb1:8 C2:8 | D2:16 |
+timp    | _ | D2!:4 .:12 |
+crash   | _ | X... .... .... .... |
+
+# ------------------------------------------------------------- arrangement
+cue explore
+play intro
+loop A B
+
+cue combat
+loop C C2
+
+cue victory
+play fanfare
+then explore
+
+switch explore -> combat  at bar      via hit  fade 0.5
+switch combat  -> explore at pattern  fade 2
+switch *       -> victory at beat     fade 0.3

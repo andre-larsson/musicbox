@@ -1,0 +1,13 @@
+musicbox
+
+This product includes software derived from Scrimshaw Jukebox by Simon Willison
+(https://tools.simonwillison.net/scrimshaw-jukebox, source: https://github.com/simonw/tools),
+licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Derived files, modified for musicbox (changes are marked "musicbox:" in the code):
+  src/score.js     score parser and compiler
+  src/synth.js     Web Audio synthesizer
+  docs/PROMPT.md   format reference and composing prompt
+
+Included unmodified:
+  scores/scrimshaw/*.scrim   example scores

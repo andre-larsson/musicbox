@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>musicbox editor</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #f6f4ef; --panel: #ffffff; --ink: #1d1f24; --muted: #646a75; --line: #dcd8cf;
+    --accent: #0f6e6e; --accent-ink: #ffffff; --err: #b3261e; --warn: #8a5a00; --code: #f1eee7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171b; --panel: #1d2026; --ink: #e8e6e1; --muted: #9aa0aa; --line: #30343c;
+      --accent: #4fb3b0; --accent-ink: #0d1114; --err: #ff8a80; --warn: #f2c06b; --code: #181a1f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  h1 { font-size: 16px; margin: 0 8px 0 0; letter-spacing: .02em; }
+  select, button, input[type=range] { font: inherit; color: inherit; }
+  select, button { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button.on { outline: 2px solid var(--accent); outline-offset: 1px; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: default; }
+  .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  #status { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 16em; }
+  #status b { color: var(--ink); }
+  main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; padding: 16px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
+  section h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  textarea { width: 100%; height: 70vh; resize: vertical; border: 1px solid var(--line); border-radius: 6px; background: var(--code); color: var(--ink); padding: 10px; font: 12.5px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre; tab-size: 8; }
+  pre { margin: 0; white-space: pre-wrap; font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; overflow-x: auto; }
+  #problems { list-style: none; margin: 0 0 12px; padding: 0; font-size: 13px; }
+  #problems li { padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+  #problems li:hover { background: var(--code); }
+  #problems .error { color: var(--err); }
+  #problems .warning { color: var(--warn); }
+  #problems .ok { color: var(--muted); cursor: default; }
+  #note { color: var(--muted); font-size: 12px; }
+  .hint { color: var(--muted); font-size: 12px; font-weight: normal; text-transform: none; letter-spacing: 0; }
+  .links { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+  .links a { color: var(--accent); text-decoration: none; }
+  .links a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <h1>musicbox</h1>
+  <div class="group">
+    <select id="file" aria-label="Score file"></select>
+    <button id="play" class="primary">Play</button>
+    <button id="stop">Stop</button>
+  </div>
+  <div class="group" id="cueGroup"><span class="label">Cue</span><span id="cues"></span></div>
+  <div class="group">
+    <label class="label" for="intensity">Intensity</label>
+    <input id="intensity" type="range" min="0" max="9" step="1" value="9">
+    <span id="intensityVal">9</span>
+  </div>
+  <div class="group">
+    <label class="label" for="volume">Volume</label>
+    <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8">
+  </div>
+  <div id="status">stopped</div>
+  <nav class="links"><a href="https://github.com/andre-larsson/musicbox/blob/main/docs/PROMPT.md">Format</a><a href="https://github.com/andre-larsson/musicbox">Source</a></nav>
+</header>
+<main>
+  <section>
+    <h2>Score <span class="hint" id="hint">Ctrl+Enter applies edits</span></h2>
+    <textarea id="score" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Score text"></textarea>
+    <div id="note"></div>
+  </section>
+  <section>
+    <h2>Problems</h2>
+    <ul id="problems"></ul>
+    <h2>Analysis</h2>
+    <pre id="analysis"></pre>
+  </section>
+</main>
+<script type="module" src="editor.js"></script>
+</body>
+</html>

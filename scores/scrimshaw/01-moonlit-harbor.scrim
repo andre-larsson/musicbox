@@ -1,0 +1,102 @@
+title    Moonlit Harbor
+composer Claude
+about    Main theme. A calypso for a harbour town after dark.
+tempo    100
+beats    4
+steps    4
+swing    0.12
+reverb   0.3
+
+voice pan     steeldrum vol=1.15 pan=-0.15
+voice flute   flute     vol=0.85 pan=0.25
+voice marimba marimba   vol=0.85 pan=0.35
+voice skank   organ     vol=0.65 pan=0.3  gate=0.45 center=A4
+voice strings strings   vol=0.42 pan=-0.3 center=E4
+voice harp    harp      vol=0.6  pan=-0.4
+voice bass    fretless  vol=0.85
+voice timp    timpani   vol=0.7
+voice kick    kick      vol=0.75
+voice rim     rim       vol=0.4  pan=0.15
+voice shaker  shaker    vol=0.4  pan=0.45
+voice conga   conga     vol=0.5  pan=-0.35
+voice tumba   tumba     vol=0.55 pan=-0.25
+voice bongo   bongo     vol=0.45 pan=0.3
+voice crash   crash     vol=0.3  pan=0.2
+voice surf    surf      vol=0.6
+
+# ---------------------------------------------------------------- intro
+pattern intro
+surf    | x... .... .... .... | .... .... x... .... | .... .... .... .... | _ |
+strings | [Dm]--------------- | = | [Bb]--------------- | [A7]--------------- |
+harp    | D3- A3- D4- F4- A4- D5- F5- A5- | D6- A5- F5- D5- A4- F4- D4- A3- | Bb2- F3- Bb3- D4- F4- Bb4- D5- F5- | A2- E3- A3- C#4- E4- G4- A4- C#5- |
+flute   | .------- A4--- D5--- | F5------- E5--- D5--- | D5----------- F5- E5- | E5------- C#5------- |
+timp    | _ | _ | _ | . . . . . . . . A2?? A2?? A2? A2? A2 A2 A2! A2! |
+conga   | _ | _ | _ | .... .... .... x.xx |
+tumba   | _ | _ | _ | .... .... .... .x.. |
+
+# ---------------------------------------------------------------- A: the tune
+pattern A
+pan   | A4-- D5-- F5- E5 F5 E5 D5 A4--- | G4-- C5-- E5- D5 E5 D5 C5 G4--- | F4-- Bb4-- D5- F5--- E5- D5- | E5----- C#5- . A4 C#5 E5 G5--- |
+pan   | F5-- D5-- A5- G5 A5 G5 F5 D5--- | E5-- C5-- G5- F5 G5 F5 E5 C5--- | D5-- F5-- Bb5- A5 G5 F5 E5 C#5- A4- | D5------- ........ |
+skank | . . [Dm]- . . [Dm]- . . [Dm]- . . [Dm]- | . . [C]- . . [C]- . . [C]- . . [C]- | . . [Bb]- . . [Bb]- . . [Bb]- . . [Bb]- | . . [A7]- . . [A7]- . . [A7]- . . [A7]- |
+skank | . . [Dm]- . . [Dm]- . . [Dm]- . . [Dm]- | . . [C]- . . [C]- . . [C]- . . [C]- | . . [Bb]- . . [Bb]- . . [A7]- . . [A7]- | . . [Dm]- . . [Dm]- . . [Dm]- . . [Dm]- |
+strings | [Dm]?--------------- | [C]?--------------- | [Bb]?--------------- | [A7]?--------------- |
+strings | [Dm]?--------------- | [C]?--------------- | [Bb]?------- [A7]?------- | [Dm]?--------------- |
+bass  | D2-- ~A2-- D3- C3-- A2-- F2 E2 | C2-- G2-- C3- Bb2-- G2-- E2 D2 | Bb1-- F2-- Bb2- D3-- F2-- D2 C#2 | A1-- E2-- A2- G2-- E2-- C#2 E2 |
+bass  | D2-- A2-- ~D3- C3-- A2-- F2 E2 | C2-- G2-- C3- Bb2-- G2-- E2 D2 | Bb1-- F2-- Bb2- A1-- E2-- G2 C#2 | D2-- A2-- D3- A2-- F2-- E2 C2 |
+kick  | x... ..x. x... ..x. | % | % | % | % | % | % | % |
+rim   | .... x... ..o. x..o | % | % | % | % | % | % | % |
+shaker| o.x. o.xo o.x. o.xo | % | % | % | % | % | % | % |
+conga | ..x. .o.x ..x. .o.. | % | % | % | % | % | % | % |
+tumba | .... .... .... ..xx | % | % | % | % | % | % | .... .... ..x. xxXx |
+crash | X... .... .... .... | _ | _ | _ | _ | _ | _ | _ |
+
+# A again, with a flute counter-line and marimba
+pattern A2 from A
+flute   | F5------- E5------- | E5------- D5------- | D5------- F5------- | E5--------------- |
+flute   | A5------- G5------- | G5------- E5------- | F5------- E5------- | F5------- ........ |
+marimba | D4- A4- F4- A4- D4- A4- F4- A4- | C4- G4- E4- G4- C4- G4- E4- G4- | Bb3- F4- D4- F4- Bb3- F4- D4- F4- | A3- E4- C#4- E4- G4- E4- C#4- E4- |
+marimba | D4- A4- F4- A4- D4- A4- F4- A4- | C4- G4- E4- G4- C4- G4- E4- G4- | Bb3- F4- D4- F4- A3- E4- C#4- E4- | D4- A4- F4- A4- D5--- . . . . |
+
+# ---------------------------------------------------------------- B: the bridge
+pattern B
+flute   | A5------- G5- F5- G5- A5- | G5----------- E5- C5- | D5--- G5--- Bb5--- A5- G5- | A5----------- . . . . |
+flute   | F5------- D5- F5- Bb5- C6- | A5----------- G5- F5- | G5--- Bb5--- D6--- C6- Bb5- | A5------- G5- E5- C#5- E5- |
+pan     | _ | _ | _ | .----------- D6 C6 A5 F5 | _ | _ | _ | _ |
+marimba | F4- C5- A4- C5- F4- C5- A4- C5- | E4- C5- G4- C5- E4- C5- G4- C5- | G4- D5- Bb4- D5- G4- D5- Bb4- D5- | F4- D5- A4- D5- F4- D5- A4- D5- |
+marimba | F4- D5- Bb4- D5- F4- D5- Bb4- D5- | F4- C5- A4- C5- F4- C5- A4- C5- | G4- D5- Bb4- D5- F4- D5- Bb4- D5- | A4- D5- E4- D5- A4- C#5- E4- C#5- |
+skank   | . . [F]- . . [F]- . . [F]- . . [F]- | . . [C]- . . [C]- . . [C]- . . [C]- | . . [Gm]- . . [Gm]- . . [Gm]- . . [Gm]- | . . [Dm]- . . [Dm]- . . [Dm]- . . [Dm]- |
+skank   | . . [Bb]- . . [Bb]- . . [Bb]- . . [Bb]- | . . [F]- . . [F]- . . [F]- . . [F]- | . . [Gm7]- . . [Gm7]- . . [Gm7]- . . [Gm7]- | . . [A7sus4]- . . [A7sus4]- . . [A7]- . . [A7]- |
+strings | [F]--------------- | [C/E]--------------- | [Gm]--------------- | [Dm]--------------- |
+strings | [Bb]--------------- | [F]--------------- | [Gm7]--------------- | [A7sus4]------- [A7]------- |
+bass    | F2------- C3--- A2--- | E2------- G2--- C3--- | G2------- D3--- Bb2--- | D2------- A2--- F2--- |
+bass    | Bb1------- F2--- D2--- | F2------- C3--- A2--- | G2------- D3--- F2--- | A1------- E2--- ~A2--- |
+kick    | x... .... x... .... | % | % | % | % | % | % | % |
+rim     | .... x... ..o. x..o | % | % | % | % | % | % | % |
+shaker  | o.x. o.xo o.x. o.xo | % | % | % | % | % | % | % |
+conga   | ..x. .o.x ..x. .o.. | % | % | % | % | % | % | % |
+tumba   | .... .... .... ..xx | % | % | .... .... x.x. xxxx | .... .... .... ..xx | % | % | .... x.x. x.xx XxXx |
+harp    | _ | _ | _ | _ | _ | _ | _ | A3 C#4 E4 G4 A4 C#5 E5 G5 A5 C#6 E6 G6 A6--- |
+
+# ---------------------------------------------------------------- C: the break
+pattern C
+marimba | G4 D5 Bb4 D5 G4 D5 Bb4 D5 G4 D5 Bb4 D5 A4 D5 Bb4 D5 | % | F4 D5 A4 D5 F4 D5 A4 D5 F4 D5 A4 D5 E4 D5 A4 D5 | % |
+marimba | F4 D5 Bb4 D5 F4 D5 Bb4 D5 F4 D5 Bb4 D5 F4 D5 Bb4 D5 | G4 E5 C5 E5 G4 E5 C5 E5 G4 E5 C5 E5 G4 E5 C5 E5 | A4 E5 C#5 E5 G4 E5 C#5 E5 A4 E5 C#5 E5 G4 E5 C#5 E5 | % |
+flute   | D5------- C5- Bb4- A4- G4- | A4------- Bb4--- D5--- | A4------- F4- G4- A4- C5- | A4--------------- | _ | _ | _ | _ |
+pan     | _ | _ | _ | _ | D5- F5- Bb5- D6- C6- Bb5- F5- D5- | E5- G5- C6- E6- D6- C6- G5- E5- | C#5- E5- G5- A5- C#6- E6- G6--- | E6--- C#6- A5- G5- E5- C#5- A4- |
+skank   | . . [Gm]- . . [Gm]- . . [Gm]- . . [Gm]- | % | . . [Dm]- . . [Dm]- . . [Dm]- . . [Dm]- | % |
+skank   | . . [Bb]- . . [Bb]- . . [Bb]- . . [Bb]- | . . [C]- . . [C]- . . [C]- . . [C]- | . . [A7]- . . [A7]- . . [A7]- . . [A7]- | % |
+strings | _ | _ | _ | _ | [Bb]--------------- | [C]--------------- | [A7]--------------- | = |
+bass    | G2-- D3-- G3- G2-- D3-- F2 F#2 | G2-- D3-- G3- G2-- D3-- C2 C#2 | D2-- A2-- D3- D2-- A2-- F2 E2 | D2-- A2-- D3- D2-- A2-- C2 A1 |
+bass    | Bb1-- F2-- Bb2- Bb1-- F2-- A1 B1 | C2-- G2-- C3- C2-- G2-- B1 Bb1 | A1-- E2-- A2- A1-- E2-- G2 E2 | A1-- E2-- A2- C#3-- E3-- ~A2- |
+kick    | x... .... x... .... | % | % | % | x... ..x. x... ..x. | % | % | % |
+rim     | .... x... .... x... | % | % | % | .... x... ..o. x..o | % | % | % |
+shaker  | o.x. o.xo o.x. o.xo | % | % | % | % | % | % | % |
+bongo   | X.o. x.o. X.o. x.ox | % | % | % | % | % | % | % |
+conga   | _ | _ | _ | _ | ..x. .o.x ..x. .o.. | % | % | % |
+tumba   | _ | _ | _ | .... .... .... x.xx | .... .... .... ..xx | % | % | % |
+crash   | _ | _ | _ | _ | X... .... .... .... | _ | _ | _ |
+timp    | _ | _ | _ | _ | _ | _ | _ | A2? A2? A2? A2? A2 A2 A2 A2 A2! A2! A2! A2! A2!! A2!! A2!! A2!! |
+
+play intro
+loop A A2 B C

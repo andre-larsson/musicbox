@@ -30,6 +30,7 @@
   button svg { width: 14px; height: 14px; fill: currentColor; display: block; flex: none; }
   input[type=number] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
   input[type=number]:disabled { background: transparent; }
+  input[type=range] { accent-color: var(--accent); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
@@ -79,6 +80,8 @@
   .track.empty .tl-secs::before { content: "Nothing to play in this cue"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
   #status { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.45em; }
   #status b { color: var(--ink); }
+  /* on a phone the status takes one or two lines as the chord and bar change; keep room for two so nothing below jumps */
+  @media (max-width: 600px) { #status { min-height: calc(2 * 1.45em); } }
 
   /* intensity, mute and solo */
   .mixbar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -103,10 +106,18 @@
   section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
   section.card h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   textarea { width: 100%; height: 70vh; resize: vertical; border: 1px solid var(--line); border-radius: 6px; background: var(--code); color: var(--ink); padding: 10px; font: 12.5px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre; tab-size: 8; }
-  pre { margin: 0; white-space: pre-wrap; font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; overflow-x: auto; }
+  /* two columns: the score stays in view, the full height of the window, while the panels beside it scroll */
+  @media (min-width: 901px) {
+    .card.score { position: sticky; top: 16px; }
+    .card.score textarea { height: max(320px, calc(100vh - 88px)); }
+  }
+  /* the analysis, a line per row: a line that wraps carries on under its second column, so tables keep their shape */
+  .analysis { font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .analysis > div { min-height: 1.5em; padding-left: var(--hang, 0); text-indent: calc(-1 * var(--hang, 0)); }
   #problems { list-style: none; margin: 0; padding: 0; font-size: 13px; }
-  #problems button { display: block; width: 100%; padding: 4px 6px; border: 0; border-radius: 4px; background: none; text-align: left; }
+  #problems button { display: flex; gap: 8px; align-items: baseline; width: 100%; padding: 4px 6px; border: 0; border-radius: 4px; background: none; text-align: left; }
   #problems button:hover { background: var(--code); }
+  #problems button b { flex: none; width: 4.6em; font-weight: 600; }
   #problems .error { color: var(--err); }
   #problems .warning { color: var(--warn); }
   #problems .ok { padding: 4px 6px; color: var(--muted); }
@@ -141,7 +152,7 @@
   .check input { accent-color: var(--accent); margin: 0; }
   .rows { display: grid; grid-template-columns: 9.5em minmax(0, 1fr) 5.5em; gap: 8px 10px; align-items: center; font-size: 13px; }
   .ctl, .meter { display: contents; }
-  .ctl input[type=range] { width: 100%; margin: 0; accent-color: var(--accent); }
+  .ctl input[type=range] { width: 100%; margin: 0; }
   .ctl output { text-align: right; font-variant-numeric: tabular-nums; }
   .ctl.off label:not(.check), .ctl.off .lab, .ctl.off output { color: var(--muted); }
   .seg { display: flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; width: fit-content; }
@@ -175,7 +186,7 @@
   .gr .mbar::after { display: none; }
   .meter output { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .meter output small { color: var(--muted); }
-  .band { display: grid; grid-template-columns: 20px minmax(6.5em, 1.3fr) repeat(3, minmax(4.4em, 1fr)) 26px; gap: 6px; align-items: center; padding: 4px; border-radius: 6px; }
+  .band { display: grid; grid-template-columns: 20px minmax(6.5em, 1.3fr) repeat(3, minmax(4.4em, 1fr)) var(--rm, 26px); gap: 6px; align-items: center; padding: 4px; border-radius: 6px; }
   .band.sel { background: color-mix(in srgb, var(--eq) 12%, transparent); }
   .band select { padding: 4px 6px; min-width: 0; }
   .band .num { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--eq); font-size: 11px; font-weight: 600; display: grid; place-items: center; }
@@ -188,10 +199,22 @@
   .stageHead code.line { margin-top: 0; }
   @media (max-width: 480px) { .rows { grid-template-columns: 7.5em minmax(0, 1fr) 4.8em; } }
   @media (max-width: 480px) {
-    .band { grid-template-columns: 20px repeat(3, minmax(0, 1fr)) 26px; }
+    .band { grid-template-columns: 20px repeat(3, minmax(0, 1fr)) var(--rm, 26px); }
     .band select { grid-column: 2 / 5; }
     .band .remove { grid-column: 5; grid-row: 1; }
     .band .fld:first-of-type { grid-column: 2; }
+  }
+  /* touch screens: every control at least 40px tall, so a finger finds it */
+  @media (pointer: coarse) {
+    button, select, input[type=number] { min-height: 40px; }
+    input[type=range] { height: 40px; }
+    .transport .icon { width: 40px; height: 40px; }
+    .chip .solo { min-width: 40px; }
+    .band { --rm: 40px; }
+    .band .remove { width: 40px; height: 40px; }
+    .seg span { padding-block: 10px; }
+    .check { min-height: 40px; }
+    #problems button { min-height: 0; padding-block: 9px; }
   }
 </style>
 </head>
@@ -243,13 +266,13 @@
 </div>
 
 <main>
-  <section class="card">
+  <section class="card score">
     <h2>Score <span class="hint" id="hint">Ctrl+Enter applies edits</span></h2>
     <textarea id="score" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Score text"></textarea>
   </section>
   <div class="side">
     <section class="card">
-      <h2>Problems</h2>
+      <h2>Problems <span class="hint" id="problemCount"></span></h2>
       <ul id="problems"></ul>
     </section>
     <section class="card master" aria-labelledby="masterH">
@@ -323,7 +346,7 @@
     </section>
     <section class="card">
       <h2>Analysis</h2>
-      <pre id="analysis"></pre>
+      <div id="analysis" class="analysis"></div>
     </section>
   </div>
 </main>

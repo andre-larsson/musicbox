@@ -12,7 +12,7 @@ const ui = {
   file: $('#file'), play: $('#play'), playPath: $('#playPath'), playLabel: $('#playLabel'), stop: $('#stop'),
   prev: $('#prev'), next: $('#next'), cues: $('#cues'), intensity: $('#intensity'),
   intensityVal: $('#intensityVal'), volume: $('#volume'), status: $('#status'), score: $('#score'),
-  problems: $('#problems'), analysis: $('#analysis'), note: $('#note'), hint: $('#hint'), share: $('#share'),
+  problems: $('#problems'), problemCount: $('#problemCount'), analysis: $('#analysis'), note: $('#note'), hint: $('#hint'), share: $('#share'),
   mixer: $('#mixer'), track: $('#track'), tNow: $('#tNow'), tEnd: $('#tEnd'),
   chain: { gain: $('#cGain'), highpass: $('#cHighpass'), eq: $('#cEq'), comp: $('#cComp'), limit: $('#cLimit') },
   masterLine: $('#masterLine'), masterReset: $('#masterReset')
@@ -35,17 +35,37 @@ function show(s) {
   if (!items.length) {
     const li = document.createElement('li'); li.className = 'ok'; li.textContent = 'No problems.'; ui.problems.append(li);
   }
+  // Each problem says in words whether it is an error or a warning, not by its color alone.
   for (const p of items) {
     const li = document.createElement('li');
     li.className = p.kind;
     const b = document.createElement('button');
     b.type = 'button';
-    b.textContent = `line ${p.line}: ${p.msg}`;
+    const kind = p.kind === 'error' ? 'Error' : 'Warning';
+    const tag = document.createElement('b'); tag.textContent = kind;
+    const msg = document.createElement('span'); msg.textContent = `line ${p.line}: ${p.msg}`;
+    b.append(tag, msg);
+    b.setAttribute('aria-label', `${kind}, line ${p.line}: ${p.msg}`);
     b.onclick = () => jumpTo(p.line);
     li.append(b);
     ui.problems.append(li);
   }
-  ui.analysis.textContent = s.errors.length ? '' : analyze(s).text;
+  const count = (n, word) => n ? `${n} ${word}${n > 1 ? 's' : ''}` : '';
+  ui.problemCount.textContent = [count(s.errors.length, 'error'), count(s.warnings.length, 'warning')].filter(Boolean).join(' · ');
+  showAnalysis(s.errors.length ? '' : analyze(s).text);
+}
+
+// The analysis is aligned text. A line that is too long for the panel carries on under its second
+// column (where a run of two or more spaces ends), or under its own indent, so tables keep their shape.
+function showAnalysis(text) {
+  ui.analysis.replaceChildren(...(text ? text.split('\n') : []).map(line => {
+    const d = document.createElement('div');
+    d.textContent = line;
+    const col = /^\s*\S+(?: \S+)*\s{2,}(?=\S)/.exec(line);
+    const hang = Math.min(24, col ? col[0].length : /^\s*/.exec(line)[0].length);
+    if (hang) d.style.setProperty('--hang', hang + 'ch');
+    return d;
+  }));
 }
 
 function jumpTo(line) {

@@ -7,7 +7,8 @@ const $ = s => document.querySelector(s);
 const ui = {
   file: $('#file'), play: $('#play'), stop: $('#stop'), cues: $('#cues'), intensity: $('#intensity'),
   intensityVal: $('#intensityVal'), volume: $('#volume'), status: $('#status'), score: $('#score'),
-  problems: $('#problems'), analysis: $('#analysis'), note: $('#note'), hint: $('#hint'), share: $('#share')
+  problems: $('#problems'), analysis: $('#analysis'), note: $('#note'), hint: $('#hint'), share: $('#share'),
+  mixer: $('#mixer')
 };
 
 const player = new MusicPlayer({ volume: +ui.volume.value });
@@ -60,6 +61,82 @@ function renderCues() {
   ui.intensity.max = String(Math.max(1, layers));
   if (+ui.intensity.value > layers) { ui.intensity.value = String(layers); ui.intensityVal.textContent = String(layers); }
   ui.intensity.disabled = layers === 0;
+  renderMixer();
+}
+
+// Mute and solo. Click a voice or bed to mute it; S plays it alone (solo several to hear them
+// together). Names stay muted or soloed across edits and reloads while the page is open.
+const muted = new Set(), soloed = new Set();
+let usedBy = {};   // cue name -> set of voice indexes that play in it
+
+function voicesByCue(s) {
+  const out = {};
+  for (const [name, c] of Object.entries(s.cues)) {
+    const set = new Set();
+    const tls = [c.intro, c.loop, ...[].concat(...(c.introSlots || []), ...(c.loopSlots || []))];
+    for (const tl of tls) if (tl) for (const e of tl.events) set.add(e.v);
+    out[name] = set;
+  }
+  return out;
+}
+
+function applyMix() {
+  if (!playable) return;
+  for (const n of playable.voices.map(v => v.name).concat((playable.beds || []).map(b => b.name))) {
+    const off = muted.has(n) || (soloed.size > 0 && !soloed.has(n));
+    if (off !== player.muted.has(n)) player.mute(n, off);
+  }
+}
+
+function renderMixer() {
+  ui.mixer.innerHTML = '';
+  const s = playable;
+  if (!s) return;
+  usedBy = voicesByCue(s);
+  const add = (label, items) => {
+    if (!items.length) return;
+    const l = document.createElement('span'); l.className = 'label'; l.textContent = label; ui.mixer.append(l);
+    for (const { name, kind, layer } of items) {
+      const chip = document.createElement('span');
+      chip.className = 'chip'; chip.dataset.name = name; chip.dataset.layer = layer || 0;
+      const m = document.createElement('button'); m.className = 'name';
+      m.innerHTML = `${name}<small>${kind}</small>`;
+      m.onclick = () => { if (muted.has(name)) muted.delete(name); else muted.add(name); applyMix(); };
+      const so = document.createElement('button'); so.className = 'solo'; so.textContent = 'S';
+      so.title = `Solo ${name}: hear it alone (solo others to add them)`;
+      so.onclick = () => { if (soloed.has(name)) soloed.delete(name); else soloed.add(name); applyMix(); };
+      chip.append(m, so);
+      ui.mixer.append(chip);
+    }
+  };
+  add('Voices', s.voices.map(v => ({ name: v.name, kind: v.inst, layer: v.layer })));
+  add('Beds', (s.beds || []).map(b => ({ name: b.name, kind: b.inst, layer: b.layer })));
+  const reset = document.createElement('button'); reset.textContent = 'Unmute all';
+  reset.onclick = () => { muted.clear(); soloed.clear(); applyMix(); };
+  ui.mixer.append(reset);
+  applyMix();
+}
+
+// Dim the voices that can't be heard right now: not in the cue playing, or above the intensity
+function updateMixer(st) {
+  if (!playable) return;
+  const cue = st.playing ? (st.cue || st.target) : null, c = cue && playable.cues[cue];
+  const bedIdx = new Map((playable.beds || []).map(b => [b.name, b]));
+  playable.voices.forEach((v, i) => mark(v.name, c && !usedBy[cue].has(i) ? `${v.name} doesn't play in ${cue}` :
+    st.playing && (v.layer || 0) > +ui.intensity.value ? `${v.name} plays from intensity ${v.layer}` : null));
+  for (const [name, b] of bedIdx) mark(name, c && c.beds && !c.beds[name] ? `${name} isn't in ${cue}` :
+    st.playing && (b.layer || 0) > +ui.intensity.value ? `${name} plays from intensity ${b.layer}` : null);
+  function mark(name, why) {
+    const chip = ui.mixer.querySelector(`.chip[data-name="${name}"]`); if (!chip) return;
+    const off = muted.has(name) || (soloed.size > 0 && !soloed.has(name));
+    chip.classList.toggle('idle', !!why);
+    chip.classList.toggle('off', off);
+    chip.classList.toggle('soloed', soloed.has(name));
+    const m = chip.querySelector('.name');
+    m.title = (why ? why + ' · ' : '') + (muted.has(name) ? `Unmute ${name}` : `Mute ${name}`);
+    m.setAttribute('aria-pressed', String(muted.has(name)));
+    chip.querySelector('.solo').setAttribute('aria-pressed', String(soloed.has(name)));
+  }
 }
 
 // Compile the editor text. If it's clean and music is playing, swap it in on the next bar.
@@ -180,6 +257,7 @@ function tick() {
     b.classList.toggle('on', st.playing && b.dataset.cue === (st.cue || st.target));
     b.title = st.playing ? `Switch to ${b.dataset.cue}` : `Play ${b.dataset.cue}`;
   }
+  updateMixer(st);
   requestAnimationFrame(tick);
 }
 

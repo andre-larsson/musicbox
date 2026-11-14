@@ -20,7 +20,7 @@ npm run preview                               # build, then serve dist/ the way 
 
 Pushing to `main` runs the tests, builds the site and deploys it to GitHub Pages (`.github/workflows/pages.yml`).
 
-The editor plays any score in `scores/`. It has a button for each cue and a slider for intensity, and it reloads the music when a `.scrim` file is saved. That makes it the listening side of the loop when an agent is writing the score. The status line shows the seed of the current performance.
+The editor plays any score in `scores/`. It has a button for each cue, a slider for intensity, and mute and solo for each voice and bed (voices that can't be heard in the cue or at the intensity playing are dimmed), and it reloads the music when a `.scrim` file is saved. That makes it the listening side of the loop when an agent is writing the score. The status line shows the seed of the current performance.
 
 Demos in `scores/demo/`: `tide-caves` (cues, layers, a fill and a fanfare), `night-ferry` (every random part, and beds that change between cues) and `brinelight` (a port of the generative pad-and-pluck score from the browser game [Brinelight](https://andre-larsson.github.io/brinelight/)).
 

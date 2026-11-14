@@ -44,6 +44,17 @@
   #problems .ok { color: var(--muted); cursor: default; }
   #note { color: var(--muted); font-size: 12px; }
   .hint { color: var(--muted); font-size: 12px; font-weight: normal; text-transform: none; letter-spacing: 0; }
+  #mixer { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  #mixer:empty { display: none; }
+  #mixer .label { margin-right: 4px; }
+  #mixer .label:not(:first-child) { margin-left: 10px; }
+  .chip { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .chip button { border: 0; border-radius: 0; padding: 4px 8px; background: var(--bg); }
+  .chip small { color: var(--muted); margin-left: 5px; }
+  .chip .solo { border-left: 1px solid var(--line); padding: 4px 8px; font-weight: 600; color: var(--muted); }
+  .chip.off .name { text-decoration: line-through; opacity: .45; }
+  .chip.soloed .solo { background: var(--accent); color: var(--accent-ink); }
+  .chip.idle { opacity: .5; border-style: dashed; }
   .links { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
   .links a { color: var(--accent); text-decoration: none; }
   .links a:hover { text-decoration: underline; }
@@ -71,6 +82,7 @@
   <div id="status">stopped</div>
   <nav class="links"><a href="https://github.com/andre-larsson/musicbox/blob/main/docs/PROMPT.md">Format</a><a href="https://github.com/andre-larsson/musicbox">Source</a></nav>
 </header>
+<div id="mixer" aria-label="Mute and solo voices"></div>
 <main>
   <section>
     <h2>Score <span class="hint" id="hint">Ctrl+Enter applies edits</span></h2>

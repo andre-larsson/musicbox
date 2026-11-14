@@ -94,6 +94,7 @@ What musicbox adds to Scrimshaw:
 - **Random parts.** `{A4 C5 E5}` plays one of the notes, `{chord}` and `{scale}` pick from the harmony or the key, `chance=0.7` and `jitter=0.2` on a voice make it sparse and loose, and `loop A {B C}` picks a pattern each time round. The player rolls the dice as it plays; a seed repeats a performance.
 - **An arpeggiator.** `arp=up|down|updown|random` with `rate=`, `span=` and `pool=chord|scale` turns `[*]` into an arpeggio that follows the harmony line.
 - **Beds.** `bed sea sea`, `bed hum drone note=D2`: continuous sounds that keep going across cue switches. A cue's `beds` line sets which play and how loud.
+- **Instruments that play like people.** Notes land a few milliseconds off the beat and vary a little in loudness, louder notes are brighter, winds, bowed strings and voices find each note from a little below and drift a few cents, and no two notes have the same vibrato. The violin, flute, clarinet, horn, brass, string section and choir are rebuilt around this (a violin body, breath and bow noise, sections of separate players). `human=` on a voice sets how loose; `human=0` plays exactly as written.
 - **More checks.** Warnings for parts shorter than their pattern and for patterns nothing plays. Errors in unplayed patterns still show up. Errors point at the line that holds the bad bar. Random note sets are checked against the chord, and the ones that rub are listed.
 
 [docs/PROMPT.md](docs/PROMPT.md) is the full reference. It's written so that you can paste it into any LLM to compose scores.

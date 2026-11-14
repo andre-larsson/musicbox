@@ -26,10 +26,14 @@ function O(S, type, f, t, stop, p, ratio = 1, detune = 0) {
     o.frequency.setValueAtTime(clamp(p.from * ratio, 1, S.nyq * 0.98), t);
     o.frequency.exponentialRampToValueAtTime(ff, t + p.glide);
   } else o.frequency.setValueAtTime(ff, t);
-  if (detune) o.detune.value = detune;
+  const dc = detune + (p && p.cents ? p.cents : 0); // musicbox: p.cents, the note's own tuning
+  if (dc) o.detune.value = dc;
   o.start(t); o.stop(stop);
   return o;
 }
+// musicbox: louder notes are brighter. p.dyn is the note's written dynamic: 0.8 plain, 1 with !,
+// 0.48 with ?. Returns about 1 for a plain note, so a plain note sounds as it did before.
+const dynB = p => 0.45 + 0.7 * (p && p.dyn != null ? p.dyn : 0.8);
 // sustained envelope; returns time when the voice is silent
 function adsr(param, t, d, { a = 0.01, dc = 0.1, s = 1, r = 0.1, peak = 1 }) {
   const tOn = t + a, tOff = Math.max(t + d, tOn + 0.003);
@@ -77,9 +81,17 @@ function noiseSrc(S, t, stop) {
   src.start(t, Math.random() * (S.noise.duration - 0.5)); src.stop(stop);
   return src;
 }
-function vibrato(S, t, stop, targets, { rate = 5, depth = 10, delay = 0.2, rise = 0.3 }) {
+// musicbox: no two notes have quite the same vibrato: the speed, width and onset vary, and the
+// speed rises a little as it starts, as a player's does. `wander` adds a slow random drift of about
+// that many cents, since a held pitch is never dead steady. `amp` puts the same wobble into the
+// loudness (a flute's vibrato is mostly breath); it returns a gain node to put in the signal path.
+function vibrato(S, t, stop, targets, { rate = 5, depth = 10, delay = 0.2, rise = 0.3, wander = 0, amp = 0 }) {
   const lfo = S.ctx.createOscillator();
-  lfo.frequency.value = rate * (0.94 + Math.random() * 0.12);
+  const r = rate * (0.9 + Math.random() * 0.2);
+  depth *= 0.8 + Math.random() * 0.4;
+  delay *= 0.75 + Math.random() * 0.5;
+  lfo.frequency.setValueAtTime(r * 0.88, t);
+  lfo.frequency.linearRampToValueAtTime(r, t + delay + rise + 0.4);
   const g = G(S);
   g.gain.setValueAtTime(0, t);
   g.gain.setValueAtTime(0, t + delay);
@@ -87,6 +99,49 @@ function vibrato(S, t, stop, targets, { rate = 5, depth = 10, delay = 0.2, rise 
   lfo.connect(g);
   targets.forEach(o => g.connect(o.detune));
   lfo.start(t); lfo.stop(stop);
+  if (wander) { const wg = G(S, wander); drift(S, t, stop).connect(wg); targets.forEach(o => wg.connect(o.detune)); }
+  if (!amp) return null;
+  const trem = G(S, 1), ag = G(S);
+  ag.gain.setValueAtTime(0, t);
+  ag.gain.setValueAtTime(0, t + delay);
+  ag.gain.linearRampToValueAtTime(amp, t + delay + rise);
+  lfo.connect(ag).connect(trem.gain);
+  return trem;
+}
+// musicbox: a slow random wobble (mostly 0.5 to 4 Hz) with an RMS of 1 and a seamless loop point,
+// shared by every note; each note reads it from a random place at a slightly different speed
+function wobble(S) {
+  if (S.wobble) return S.wobble;
+  const sr = S.ctx.sampleRate, len = sr * 6, fade = Math.floor(sr * 0.5);
+  const x = new Float32Array(len + fade), k = 1 - Math.exp(-2 * Math.PI * 2.5 / sr);
+  let a = 0, b = 0;
+  for (let i = 0; i < x.length + sr; i++) { a += k * ((Math.random() * 2 - 1) - a); b += k * (a - b); if (i >= sr) x[i - sr] = b; }
+  const buf = S.ctx.createBuffer(1, len, sr), y = buf.getChannelData(0);
+  let mean = 0, ms = 0;
+  for (let i = 0; i < len; i++) { y[i] = i < fade ? x[i] * Math.sqrt(i / fade) + x[len + i] * Math.sqrt(1 - i / fade) : x[i]; mean += y[i]; }
+  mean /= len;
+  for (let i = 0; i < len; i++) { y[i] -= mean; ms += y[i] * y[i]; }
+  const g = 1 / Math.sqrt(ms / len || 1);
+  for (let i = 0; i < len; i++) y[i] *= g;
+  return (S.wobble = buf);
+}
+function drift(S, t, stop) {
+  const src = S.ctx.createBufferSource(); src.buffer = wobble(S); src.loop = true;
+  src.playbackRate.value = 0.75 + Math.random() * 0.6;
+  src.start(t, Math.random() * (src.buffer.duration - 0.5)); src.stop(stop);
+  return src;
+}
+// musicbox: bow or breath pressure is never quite even; a gain that wobbles by about ±depth
+function press(S, t, stop, depth) {
+  const g = G(S, 1), wg = G(S, depth);
+  drift(S, t, stop).connect(wg).connect(g.gain);
+  return g;
+}
+// musicbox: the pitch starts a little flat and settles, as a player finds the note
+function scoop(oscs, t, cents, tau, p) {
+  if (p && p.from) return; // already sliding into it
+  const c = cents * (0.6 + Math.random() * 0.8);
+  for (const o of oscs) { const base = o.detune.value; o.detune.setValueAtTime(base - c, t); o.detune.setTargetAtTime(base, t, tau); }
 }
 function metal(S, out, t, stop, mult = 1) {
   const sum = G(S, 0.16); sum.connect(out);
@@ -213,7 +268,9 @@ function pianoTone(S, f) {
 }
 
 /* ------------------------------------------------------------ instruments */
-// play(S, out, t, dur, freq, vel, p) ; p = {from, glide, bright, att, rel}
+// play(S, out, t, dur, freq, vel, p) ; p = {from, glide, bright, att, rel, dyn, cents}
+// musicbox: optional per instrument: cents (how far a player's tuning strays, note to note) and
+// loose (how much of the human timing and loudness it gets; 0 for plain synths)
 const INST = {
   steeldrum: { rev: 0.22, level: 0.66, play(S, out, t, d, f, v, p) {
     const tau = clamp(0.5 * Math.pow(440 / f, 0.45), 0.15, 1.1);
@@ -244,7 +301,7 @@ const INST = {
     const tau = clamp(0.55 * Math.pow(440 / f, 0.3), 0.2, 0.9);
     partial(S, out, t, f, { a: .002, tau, peak: v * .7 });
     partial(S, out, t, f * 2, { a: .001, tau: tau * .4, peak: v * .14 });
-    partial(S, out, t, f * 4.02, { a: .001, tau: tau * .12, peak: v * .1 * p.bright });
+    partial(S, out, t, f * 4.02, { a: .001, tau: tau * .12, peak: v * .1 * p.bright * dynB(p) }); // musicbox: dynB
     noise(S, out, t, { f: 5000, q: 1, tau: .003, peak: v * .04 });
   } },
   glock: { rev: 0.35, level: 0.53, play(S, out, t, d, f, v, p) {
@@ -269,7 +326,7 @@ const INST = {
   bell: { rev: 0.45, level: 0.71, play(S, out, t, d, f, v, p) {
     const damp = t + d + 3;
     [[.5, .35, 3.5], [1, 1, 2.4], [1.19, .55, 1.7], [1.5, .38, 1.4], [2, .45, 1.1], [2.52, .22, .8], [3.01, .16, .55], [4.1, .08, .35]]
-      .forEach(([r, a, tau]) => partial(S, out, t, f * r, { a: .002, tau, peak: v * a * .35, damp, dampTau: .4 }));
+      .forEach(([r, a, tau]) => partial(S, out, t, f * r, { a: .002, tau, peak: v * a * .35 * (r > 1.6 ? Math.pow(dynB(p), 1.5) : 1), damp, dampTau: .4 })); // musicbox: dynB
     noise(S, out, t, { f: f * 4, q: 1, tau: .01, peak: v * .05 });
   } },
   piano: { rev: 0.3, level: 1, play(S, out, t, d, f, v, p) { // musicbox
@@ -288,7 +345,7 @@ const INST = {
     src.connect(lp).connect(g).connect(out);
     src.start(t); src.stop(Math.min(end, t + e.buf.duration / rate));
   } },
-  organ: { rev: 0.15, level: 0.98, play(S, out, t, d, f, v, p) {
+  organ: { loose: 0.5, rev: 0.15, level: 0.98, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', 5500 * p.bright, 0.5);
     lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .005, r: p.rel || .06, peak: v * .5 });
@@ -304,33 +361,51 @@ const INST = {
     const sub = G(S, .45); sub.connect(lp); O(S, 'sine', f, t, end, p, .5).connect(sub);
     noise(S, out, t, { f: f * 3, q: 2, a: .01, tau: .02, peak: v * .04 });
   } },
-  strings: { rev: 0.4, level: 3.18, play(S, out, t, d, f, v, p) {
-    const g = G(S); const lp = F(S, 'lowpass', Math.min(9000, (1300 + f * 2.6) * p.bright), 0.6);
-    lp.connect(g).connect(out);
+  strings: { rev: 0.4, level: 2.57, cents: 2, body(S, out) { // musicbox: the violin family's body
+    const body = F(S, 'peaking', 2600, 1.2, 3), body2 = F(S, 'peaking', 320, 1.4, 2.5);
+    body.connect(body2).connect(out);
+    return body;
+  }, play(S, out, t, d, f, v, p) {
+    // musicbox: a section of four players, each a few cents from the others, each with their own
+    // vibrato and coming in a moment apart
+    const g = G(S); const lp = F(S, 'lowpass', Math.min(9000, (1300 + f * 2.6) * p.bright * dynB(p)), 0.6);
     const end = adsr(g.gain, t, d, { a: p.att || .16, dc: .3, s: .9, r: p.rel || .38, peak: v * .5 });
-    const os = [-8, 0, 8].map(c => { const o = O(S, 'sawtooth', f, t, end, p, 1, c); const og = G(S, .22); o.connect(og).connect(lp); return o; });
-    vibrato(S, t, end, os, { rate: 5.3, depth: 7, delay: .15, rise: .4 });
+    lp.connect(press(S, t, end, .04)).connect(g).connect(out);
+    for (let i = 0; i < 4; i++) {
+      const o = O(S, 'sawtooth', f, t, end, p, 1, (Math.random() * 2 - 1) * 9);
+      const og = G(S); og.gain.setValueAtTime(0, t); og.gain.setTargetAtTime(.19, t + Math.random() * .035, .015);
+      o.connect(og).connect(lp);
+      scoop([o], t, 10, .05, p);
+      vibrato(S, t, end, [o], { rate: 5.3, depth: 8, delay: .15, rise: .4, wander: 3 });
+    }
   } },
-  pad: { rev: 0.5, level: 2.18, play(S, out, t, d, f, v, p) {
+  pad: { rev: 0.5, level: 2.18, loose: 0.5, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', (600 + f * 1.4) * p.bright, 0.9);
     lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .5, r: p.rel || 1.0, peak: v * .45 });
     [-12, 0, 11].forEach(c => { const og = G(S, .24); O(S, 'sawtooth', f, t, end, p, 1, c).connect(og).connect(lp); });
   } },
-  choir: { rev: 0.5, level: 2.02, play(S, out, t, d, f, v, p) { choirVoice(S, out, t, d, f, v, p, [[730, 7, 1], [1090, 8, .55], [2440, 10, .25]]); } },
-  voices: { rev: 0.5, level: 2.01, play(S, out, t, d, f, v, p) { choirVoice(S, out, t, d, f, v, p, [[380, 6, 1], [820, 8, .35], [2500, 10, .1]]); } },
-  brass: { rev: 0.25, level: 0.83, play(S, out, t, d, f, v, p) {
+  choir: { rev: 0.5, level: 2.02, cents: 2, body(S, out, vo, onStop) { return vowel(S, out, vo, [[730, 7, 1], [1090, 8, .55], [2440, 10, .25]], onStop); }, play: choirVoice },
+  voices: { rev: 0.5, level: 2.01, cents: 2, body(S, out, vo, onStop) { return vowel(S, out, vo, [[380, 6, 1], [820, 8, .35], [2500, 10, .1]], onStop); }, play: choirVoice },
+  brass: { rev: 0.25, level: 0.72, cents: 2, play(S, out, t, d, f, v, p) {
+    // musicbox: three players, each lipping up to the note from a little below and a moment apart;
+    // louder notes open the filter further, so a forte is brassy and a piano is mellow
     const g = G(S); const lp = F(S, 'lowpass', f, 1.3);
     lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .03, dc: .2, s: .85, r: p.rel || .12, peak: v * .42 });
-    const pk = Math.min(11000, (f * 5 + 700) * p.bright * (0.55 + 0.45 * v));
+    const pk = Math.min(11000, (f * 5 + 700) * p.bright * (0.19 + 0.9 * (p.dyn != null ? p.dyn : 0.8)));
     lp.frequency.setValueAtTime(f * 1.1, t);
     lp.frequency.linearRampToValueAtTime(pk, t + .06);
     lp.frequency.setTargetAtTime(f * 1.2 + (pk - f) * .5, t + .06, .2);
-    const os = [-5, 5].map(c => { const o = O(S, 'sawtooth', f, t, end, p, 1, c); o.connect(lp); return o; });
-    vibrato(S, t, end, os, { rate: 5.2, depth: 6, delay: .35, rise: .3 });
+    for (let i = 0; i < 3; i++) {
+      const o = O(S, 'sawtooth', f, t, end, p, 1, (Math.random() * 2 - 1) * 7);
+      const og = G(S); og.gain.setValueAtTime(0, t); og.gain.setTargetAtTime(.82, t + Math.random() * .02, .006);
+      o.connect(og).connect(lp);
+      scoop([o], t, 22, .025, p);
+      vibrato(S, t, end, [o], { rate: 5.2, depth: 5, delay: .35, rise: .3, wander: 2 });
+    }
   } },
-  trumpet: { rev: 0.25, level: 1.17, play(S, out, t, d, f, v, p) {
+  trumpet: { cents: 4, rev: 0.25, level: 1.17, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', f, 1.6);
     const pk2 = F(S, 'peaking', 1400, 1, 5);
     lp.connect(pk2).connect(g).connect(out);
@@ -340,59 +415,87 @@ const INST = {
     lp.frequency.linearRampToValueAtTime(pk, t + .04);
     lp.frequency.setTargetAtTime(f * 2 + (pk - f) * .45, t + .04, .15);
     const o = O(S, 'sawtooth', f, t, end, p); o.connect(lp);
-    vibrato(S, t, end, [o], { rate: 5.6, depth: 11, delay: .25, rise: .25 });
+    scoop([o], t, 20, .025, p); // musicbox
+    vibrato(S, t, end, [o], { rate: 5.6, depth: 11, delay: .25, rise: .25, wander: 3 });
   } },
-  horn: { rev: 0.4, level: 0.7, play(S, out, t, d, f, v, p) {
+  horn: { rev: 0.4, level: 0.7, cents: 4, play(S, out, t, d, f, v, p) {
+    // musicbox: the lips slur up onto the note with a short buzz, the tone flares and settles,
+    // and louder notes are much brassier
     const g = G(S); const lp = F(S, 'lowpass', f * 2, 0.8);
-    lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .06, dc: .3, s: .9, r: p.rel || .2, peak: v * .5 });
-    lp.frequency.setValueAtTime(f * 1.2, t);
-    lp.frequency.linearRampToValueAtTime(Math.min(6000, (f * 3 + 300) * p.bright), t + .08);
+    const db = dynB(p), top = Math.min(7000, (f * 3 + 300) * p.bright * db * db);
+    lp.frequency.setValueAtTime(f * 1.1, t);
+    lp.frequency.linearRampToValueAtTime(Math.min(8000, top * 1.3), t + .07);
+    lp.frequency.setTargetAtTime(top, t + .07, .15);
     const o1 = O(S, 'sawtooth', f, t, end, p); const g1 = G(S, .5); o1.connect(g1).connect(lp);
     const o2 = O(S, wave(S, 'horn'), f, t, end, p, 1, 4); o2.connect(lp);
-    vibrato(S, t, end, [o1, o2], { rate: 4.8, depth: 5, delay: .4, rise: .4 });
+    scoop([o1, o2], t, 26, .03, p);
+    const trem = vibrato(S, t, end, [o1, o2], { rate: 4.8, depth: 4, delay: .4, rise: .4, wander: 3, amp: .02 });
+    lp.connect(trem).connect(press(S, t, end, .03)).connect(g).connect(out);
+    noise(S, out, t, { f: Math.min(f * 4, 6000), q: 1.2, a: .004, tau: .02, peak: v * .05 * db });
   } },
-  tuba: { rev: 0.2, level: 0.7, play(S, out, t, d, f, v, p) {
+  tuba: { cents: 3, rev: 0.2, level: 0.7, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', (f * 3 + 150) * p.bright, 1.0);
     lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .035, dc: .2, s: .8, r: p.rel || .1, peak: v * .55 });
     O(S, 'sawtooth', f, t, end, p).connect(lp);
     const sg = G(S, .5); O(S, 'sine', f, t, end, p).connect(sg).connect(lp);
   } },
-  flute: { rev: 0.38, level: 1.0, play(S, out, t, d, f, v, p) {
-    const g = G(S); g.connect(out);
-    const end = adsr(g.gain, t, d, { a: p.att || .055, dc: .15, s: .85, r: p.rel || .09, peak: v * .48 });
-    const o1 = O(S, 'sine', f, t, end, p); const g1 = G(S, .75); o1.connect(g1).connect(g);
-    const o2 = O(S, 'triangle', f, t, end, p); const g2 = G(S, .22 * p.bright); o2.connect(g2).connect(g);
-    const o3 = O(S, 'sine', f, t, end, p, 2); const g3 = G(S, .07); o3.connect(g3).connect(g);
-    vibrato(S, t, end, [o1, o2, o3], { rate: 5, depth: 13, delay: .22, rise: .35 });
+  flute: { rev: 0.38, level: 1.18, cents: 4, play(S, out, t, d, f, v, p) {
+    // musicbox: nearly a sine, with harmonics that grow with the dynamic. Each note starts with a
+    // puff of air and a flicker of the octave above (the "chiff"), breath runs through it, and the
+    // vibrato is mostly in the breath
+    const g = G(S), sum = G(S, 1);
+    const end = adsr(g.gain, t, d, { a: p.att || .06, dc: .15, s: .85, r: p.rel || .1, peak: v * .48 });
+    const b = p.bright * dynB(p);
+    const o1 = O(S, 'sine', f, t, end, p); const g1 = G(S, .78); o1.connect(g1).connect(sum);
+    const o2 = O(S, 'sine', f, t, end, p, 2); const g2 = G(S); o2.connect(g2).connect(sum);
+    g2.gain.setValueAtTime(.34 * b, t); g2.gain.setTargetAtTime(.12 * b, t + .02, .04);
+    const o3 = O(S, 'sine', f, t, end, p, 3); const g3 = G(S, .05 * b * b); o3.connect(g3).connect(sum);
+    const o4 = O(S, 'sine', f, t, end, p, 4); const g4 = G(S, .018 * b * b); o4.connect(g4).connect(sum);
+    const os = [o1, o2, o3, o4];
+    scoop(os, t, 10, .025, p);
+    const trem = vibrato(S, t, end, os, { rate: 5, depth: 8, delay: .22, rise: .35, wander: 3, amp: .1 });
+    sum.connect(trem).connect(press(S, t, end, .04)).connect(g).connect(out);
     // breath
     const n = noiseSrc(S, t, end); const hp = F(S, 'bandpass', Math.min(f * 2.2, 9000), 0.7); const ng = G(S);
-    ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(v * .05, t + .03);
-    ng.gain.setTargetAtTime(v * .012, t + .03, .06); ng.gain.setTargetAtTime(0, Math.max(t + d, t + .04), .03);
+    ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(v * .07, t + .02);
+    ng.gain.setTargetAtTime(v * .016, t + .02, .05); ng.gain.setTargetAtTime(0, Math.max(t + d, t + .04), .03);
     n.connect(hp).connect(ng).connect(out);
   } },
-  clarinet: { rev: 0.3, level: 1.16, play(S, out, t, d, f, v, p) {
-    const g = G(S); const lp = F(S, 'lowpass', Math.min(9000, 3000 * p.bright), 0.6);
-    lp.connect(g).connect(out);
+  clarinet: { rev: 0.3, level: 1.16, cents: 3, play(S, out, t, d, f, v, p) {
+    // musicbox: the reed speaks dull and opens up, louder notes are brighter, and breath runs
+    // under the tone. Little vibrato, as a classical player would, but never quite still
+    const g = G(S);
+    const top = Math.min(9000, (700 + 2300 * dynB(p)) * p.bright);
+    const lp = F(S, 'lowpass', top, 0.6);
+    lp.frequency.setValueAtTime(clamp(f * 1.5, 300, top), t); lp.frequency.setTargetAtTime(top, t, .03);
     const end = adsr(g.gain, t, d, { a: p.att || .035, dc: .2, s: .9, r: p.rel || .08, peak: v * .42 });
     const o = O(S, wave(S, 'clarinet'), f, t, end, p); o.connect(lp);
-    vibrato(S, t, end, [o], { rate: 4.6, depth: 5, delay: .4, rise: .4 });
+    scoop([o], t, 8, .02, p);
+    const trem = vibrato(S, t, end, [o], { rate: 4.6, depth: 4, delay: .45, rise: .4, wander: 3, amp: .015 });
+    lp.connect(trem).connect(press(S, t, end, .035)).connect(g).connect(out);
     noise(S, out, t, { f: f * 3, q: 1, a: .01, tau: .02, peak: v * .02 });
+    const n = noiseSrc(S, t, end); const nb = F(S, 'bandpass', Math.min(f * 3, 8000), 1); const ng = G(S);
+    ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(v * .006, t + .03);
+    ng.gain.setTargetAtTime(0, Math.max(t + d, t + .04), .03);
+    n.connect(nb).connect(ng).connect(out);
   } },
-  oboe: { rev: 0.3, level: 1.98, play(S, out, t, d, f, v, p) {
+  oboe: { cents: 3, rev: 0.3, level: 1.98, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', Math.min(9000, 3800 * p.bright), 0.6);
     lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .03, dc: .2, s: .9, r: p.rel || .08, peak: v * .36 });
     const o = O(S, wave(S, 'oboe'), f, t, end, p); o.connect(lp);
-    vibrato(S, t, end, [o], { rate: 5.5, depth: 8, delay: .25, rise: .3 });
+    scoop([o], t, 10, .025, p); // musicbox
+    vibrato(S, t, end, [o], { rate: 5.5, depth: 8, delay: .25, rise: .3, wander: 3 });
   } },
-  bassoon: { rev: 0.25, level: 1.72, play(S, out, t, d, f, v, p) {
+  bassoon: { cents: 3, rev: 0.25, level: 1.72, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', Math.min(6000, 1700 * p.bright), 0.7);
     lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .04, dc: .2, s: .85, r: p.rel || .08, peak: v * .45 });
     const o = O(S, wave(S, 'bassoon'), f, t, end, p); o.connect(lp);
-    vibrato(S, t, end, [o], { rate: 5, depth: 5, delay: .35, rise: .3 });
+    scoop([o], t, 10, .025, p); // musicbox
+    vibrato(S, t, end, [o], { rate: 5, depth: 5, delay: .35, rise: .3, wander: 3 });
   } },
   accordion: { rev: 0.22, level: 2.06, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', Math.min(9000, (2600 + f) * p.bright), 0.7);
@@ -400,21 +503,34 @@ const INST = {
     const end = adsr(g.gain, t, d, { a: p.att || .025, dc: .2, s: .92, r: p.rel || .07, peak: v * .4 });
     [0, 15, -13].forEach((c, i) => { const og = G(S, i ? .28 : .36); O(S, wave(S, 'reed'), f, t, end, p, 1, c).connect(og).connect(lp); });
   } },
-  fiddle: { rev: 0.3, level: 0.93, play(S, out, t, d, f, v, p) {
-    const g = G(S); const body = F(S, 'peaking', 2800, 1.2, 6); const body2 = F(S, 'peaking', 480, 1.5, 4);
-    const lp = F(S, 'lowpass', 6500 * p.bright, 0.6);
-    body.connect(body2).connect(lp).connect(g).connect(out);
-    const end = adsr(g.gain, t, d, { a: p.att || .06, dc: .2, s: .9, r: p.rel || .14, peak: v * .3 });
-    const os = [-4, 4].map(c => { const o = O(S, 'sawtooth', f, t, end, p, 1, c); o.connect(body); return o; });
-    vibrato(S, t, end, os, { rate: 5.8, depth: 14, delay: .18, rise: .25 });
-    noise(S, out, t, { type: 'highpass', f: 3000, q: .5, a: .01, tau: .03, peak: v * .03 });
+  fiddle: { rev: 0.3, level: 1.32, cents: 4, body(S, out) {
+    // musicbox: the resonances of a violin body. The vibrato sweeps each note's harmonics across
+    // them, so the tone shimmers as a real violin's does
+    const hp = F(S, 'highpass', 180, .7);
+    let node = hp;
+    for (const [ff, q, db] of [[290, 5, 6], [460, 4, 4], [1100, 2.5, 2], [2500, 1.5, 6], [3500, 2.5, 3]]) { const r = F(S, 'peaking', ff, q, db); node.connect(r); node = r; }
+    node.connect(out);
+    return hp;
+  }, play(S, out, t, d, f, v, p) {
+    // musicbox: one bowed string (a sawtooth). Bow noise runs through the note, strongest as the
+    // bow bites, and the pitch settles onto the note
+    const g = G(S), lp = F(S, 'lowpass', Math.min(10000, 5600 * p.bright * dynB(p)), 0.6);
+    const end = adsr(g.gain, t, d, { a: p.att || .07, dc: .25, s: .85, r: p.rel || .16, peak: v * .3 });
+    const o = O(S, 'sawtooth', f, t, end, p); o.connect(lp);
+    scoop([o], t, 16, .03, p);
+    const trem = vibrato(S, t, end, [o], { rate: 5.8, depth: 14, delay: .18, rise: .25, wander: 3, amp: .03 });
+    lp.connect(trem).connect(press(S, t, end, .06)).connect(g).connect(out);
+    const n = noiseSrc(S, t, end); const nb = F(S, 'bandpass', clamp(f * 4, 1800, 8000), .5); const ng = G(S);
+    ng.gain.setValueAtTime(0, t); ng.gain.linearRampToValueAtTime(v * .06, t + .012);
+    ng.gain.setTargetAtTime(v * .014, t + .012, .04); ng.gain.setTargetAtTime(0, Math.max(t + d, t + .05), .04);
+    n.connect(nb).connect(ng).connect(out);
   } },
   harp: { rev: 0.45, level: 1.07, play(S, out, t, d, f, v, p) {
-    pluck(S, out, t, d, f, v * .55, PLUCK.harp, [F(S, 'lowpass', 3500 * p.bright, .5)]);
+    pluck(S, out, t, d, f, v * .55, PLUCK.harp, [F(S, 'lowpass', 3500 * p.bright * dynB(p), .5)]); // musicbox: dynB
     partial(S, out, t, f, { a: .003, tau: .9, peak: v * .12 });
   } },
   guitar: { rev: 0.25, level: 1.53, play(S, out, t, d, f, v, p) {
-    pluck(S, out, t, d, f, v * .55, PLUCK.guitar, [F(S, 'lowpass', 4200 * p.bright, .5), F(S, 'peaking', 220, 1, 3)]);
+    pluck(S, out, t, d, f, v * .55, PLUCK.guitar, [F(S, 'lowpass', 4200 * p.bright * dynB(p), .5), F(S, 'peaking', 220, 1, 3)]);
   } },
   banjo: { rev: 0.18, level: 1.18, play(S, out, t, d, f, v, p) {
     pluck(S, out, t, d, f, v * .5, PLUCK.banjo, [F(S, 'highpass', 250, .5), F(S, 'peaking', 2500, 1.5, 5)]);
@@ -425,27 +541,30 @@ const INST = {
     pluck(S, out, t, d, f * 2, v * .16 * p.bright, PLUCK.harpsichord, [F(S, 'highpass', 400, .5)]);
   } },
   pizz: { rev: 0.35, level: 1.21, play(S, out, t, d, f, v, p) {
-    pluck(S, out, t, d, f, v * .6, PLUCK.pizz, [F(S, 'lowpass', 2400 * p.bright, .6)]);
+    pluck(S, out, t, d, f, v * .6, PLUCK.pizz, [F(S, 'lowpass', 2400 * p.bright * dynB(p), .6)]); // musicbox: dynB
     partial(S, out, t, f, { a: .002, tau: .12, peak: v * .18 });
   } },
   upright: { rev: 0.15, level: 0.72, play(S, out, t, d, f, v, p) {
-    pluck(S, out, t, d, f, v * .5, PLUCK.upright, [F(S, 'lowpass', 1400 * p.bright, .6)]);
+    pluck(S, out, t, d, f, v * .5, PLUCK.upright, [F(S, 'lowpass', 1400 * p.bright * dynB(p), .6)]);
     partial(S, out, t, f, { a: .004, tau: .5, peak: v * .45, damp: t + d + .04, dampTau: .07 });
     noise(S, out, t, { type: 'lowpass', f: 900, q: .5, tau: .01, peak: v * .12 });
   } },
-  fretless: { rev: 0.12, level: 0.69, play(S, out, t, d, f, v, p) {
+  fretless: { cents: 3, rev: 0.12, level: 0.69, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', 300, 3.2);
     lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .012, dc: .6, s: .72, r: p.rel || .08, peak: v * .6 });
-    const top = Math.min(4000, (f * 4.5 + 250) * p.bright);
+    const top = Math.min(4000, (f * 4.5 + 250) * p.bright * dynB(p)); // musicbox: dynB
     lp.frequency.setValueAtTime(f * 1.2 + 80, t);
     lp.frequency.linearRampToValueAtTime(top, t + .07);
     lp.frequency.setTargetAtTime(f * 2.2 + 150, t + .07, .25);
     const o1 = O(S, 'sawtooth', f, t, end, p); const g1 = G(S, .38); o1.connect(g1).connect(lp);
     const o2 = O(S, 'sine', f, t, end, p); const g2 = G(S, .75); o2.connect(g2).connect(lp);
-    vibrato(S, t, end, [o1, o2], { rate: 4.5, depth: 6, delay: .3, rise: .4 });
+    // musicbox: a fretless player slides into some notes; a soft thump of the finger on the string
+    scoop([o1, o2], t, Math.random() < .3 ? 35 : 6, .04, p);
+    vibrato(S, t, end, [o1, o2], { rate: 4.5, depth: 6, delay: .3, rise: .4, wander: 2 });
+    noise(S, out, t, { type: 'lowpass', f: 700, q: .7, tau: .012, peak: v * .1 });
   } },
-  synbass: { rev: 0.08, level: 0.76, play(S, out, t, d, f, v, p) {
+  synbass: { loose: 0.3, rev: 0.08, level: 0.76, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', 300, 5);
     lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .003, dc: .35, s: .55, r: p.rel || .06, peak: v * .5 });
@@ -460,9 +579,9 @@ const INST = {
     partial(S, out, t, f * 1.505, { a: .003, tau: .35, peak: v * .32, damp, dampTau: .15 });
     partial(S, out, t, f * 1.99, { a: .003, tau: .25, peak: v * .2, damp, dampTau: .15 });
     partial(S, out, t, f * 2.44, { a: .002, tau: .15, peak: v * .1 });
-    noise(S, out, t, { type: 'lowpass', f: 500, q: .7, tau: .03, peak: v * .5 });
+    noise(S, out, t, { type: 'lowpass', f: 500 * dynB(p), q: .7, tau: .03, peak: v * .5 }); // musicbox: dynB
   } },
-  chip: { rev: 0.15, level: 1.17, play(S, out, t, d, f, v, p) {
+  chip: { loose: 0, rev: 0.15, level: 1.17, play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', 6000 * p.bright, .5); lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .003, dc: .1, s: .8, r: p.rel || .04, peak: v * .3 });
     const o = O(S, 'square', f, t, end, p); o.connect(lp);
@@ -470,21 +589,38 @@ const INST = {
   } }
 };
 ['sine', 'square', 'saw', 'triangle'].forEach(w => {
-  INST[w] = { rev: 0.2, level: ({ sine: 0.94, triangle: 1.15, square: 0.78, saw: 1.35 })[w], play(S, out, t, d, f, v, p) {
+  INST[w] = { loose: 0, rev: 0.2, level: ({ sine: 0.94, triangle: 1.15, square: 0.78, saw: 1.35 })[w], play(S, out, t, d, f, v, p) {
     const g = G(S); const lp = F(S, 'lowpass', 8000 * p.bright, .5); lp.connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .008, dc: .2, s: .85, r: p.rel || .08, peak: v * .4 });
     O(S, w === 'saw' ? 'sawtooth' : w, f, t, end, p).connect(lp);
   } };
 });
 
-function choirVoice(S, out, t, d, f, v, p, formants) {
+// musicbox: the vowel, once per voice: formant filters that sway a little, as a choir's vowel does
+function vowel(S, out, vo, formants, onStop) {
+  const into = G(S, 1), t = S.ctx.currentTime;
+  const sway = S.ctx.createOscillator(); sway.frequency.value = .15 + Math.random() * .2; sway.start(t);
+  if (onStop) onStop(() => sway.stop());
+  for (const [ff, q, a] of formants) {
+    const fc = ff * (vo.bright > 1 ? 1.1 : 1), bp = F(S, 'bandpass', fc, q), fg = G(S, a);
+    const sg = G(S, fc * .03); sway.connect(sg).connect(bp.frequency);
+    into.connect(bp).connect(fg).connect(out);
+  }
+  return into;
+}
+// musicbox: three singers per note, each a few cents from the others, finding the note from a
+// little below, coming in a moment apart, each with their own vibrato; breath through the vowel
+function choirVoice(S, out, t, d, f, v, p) {
   const g = G(S); g.connect(out);
   const end = adsr(g.gain, t, d, { a: p.att || .28, dc: .3, s: .95, r: p.rel || .6, peak: v * 1.6 });
-  const src = G(S, 1);
-  const os = [-7, 6].map(c => { const o = O(S, 'sawtooth', f, t, end, p, 1, c); const og = G(S, .5); o.connect(og).connect(src); return o; });
-  vibrato(S, t, end, os, { rate: 5.1, depth: 12, delay: .2, rise: .5 });
-  for (const [ff, q, a] of formants) { const bp = F(S, 'bandpass', ff * (p.bright > 1 ? 1.1 : 1), q); const fg = G(S, a); src.connect(bp).connect(fg).connect(g); }
-  const n = noiseSrc(S, t, end); const nb = F(S, 'bandpass', formants[1][0], 2); const ng = G(S, v * .04); n.connect(nb).connect(ng).connect(g);
+  for (let i = 0; i < 3; i++) {
+    const o = O(S, 'sawtooth', f, t, end, p, 1, (Math.random() * 2 - 1) * 10);
+    const og = G(S); og.gain.setValueAtTime(0, t); og.gain.setTargetAtTime(.41, t + Math.random() * .06, .03);
+    o.connect(og).connect(g);
+    scoop([o], t, 14, .05, p);
+    vibrato(S, t, end, [o], { rate: 5.1, depth: 11, delay: .2, rise: .5, wander: 4 });
+  }
+  const n = noiseSrc(S, t, end); const ng = G(S, v * .1); n.connect(ng).connect(g);
 }
 
 /* ----------------------------------------------------------------- drums */
@@ -779,25 +915,34 @@ function createSynth(ctx, dest, opts = {}) {
       const bus = G(S, 1); bus.connect(master);
       const sendBus = G(S, 1); sendBus.connect(verbIn);
       verbRet.gain.setValueAtTime(0.25 + 1.6 * (song.reverb != null ? song.reverb : 0.3), ctx.currentTime);
+      const stops = []; // musicbox: cleanups for voice bodies
       const ch = song.voices.map(v => {
         const def = v.drum ? DRUM[v.inst] : INST[v.inst];
         const input = G(S, v.vol * def.level);
         const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
         if (pan) { pan.pan.value = v.pan; input.connect(pan).connect(bus); } else input.connect(bus);
         const send = G(S, v.rev != null ? v.rev : def.rev); input.connect(send).connect(sendBus);
-        return { v, def, input };
+        // musicbox: an instrument's body (a violin's resonances, a choir's vowel) is built once per
+        // voice, and every note plays into it
+        const into = def.body ? def.body(S, input, v, fn => stops.push(fn)) : input;
+        return { v, def, input, into };
       });
       return {
         bus, sendBus, ch,
         play(ev, t) {
           const c = ch[ev.v]; if (!c) return;
           try {
-            if (c.v.drum) { c.def.hit(S, c.input, t, ev.vel); return; }
-            const n = ev.m.length, vs = ev.vel / Math.sqrt(n);
-            const p = { bright: c.v.bright, att: c.v.att, rel: c.v.rel, glide: c.v.glide, from: null };
+            // musicbox: players are not machines. Each note lands a few milliseconds either side
+            // of the beat and a little louder or softer, and on instruments a player tunes as they
+            // go, a few cents off. The voice's human= scales this; human=0 plays exactly as written.
+            const hu = (c.v.human != null ? c.v.human : 1) * (c.def.loose != null ? c.def.loose : 1);
+            const wob = () => hu * (Math.random() + Math.random() - 1);
+            if (c.v.drum) { c.def.hit(S, c.input, t + wob() * .004, ev.vel * (1 + wob() * .1)); return; }
+            const n = ev.m.length, dyn = ev.vel * (1 + wob() * .08), vs = dyn / Math.sqrt(n);
             ev.m.forEach((m, i) => {
-              p.from = (ev.g != null && i === n - 1) ? mtof(ev.g) : null;
-              c.def.play(S, c.input, t, ev.d, mtof(m), vs, p);
+              const p = { bright: c.v.bright, att: c.v.att, rel: c.v.rel, glide: c.v.glide, dyn,
+                from: (ev.g != null && i === n - 1) ? mtof(ev.g) : null, cents: wob() * (c.def.cents || 0) };
+              c.def.play(S, c.into, t + wob() * .008, ev.d, mtof(m), vs * (1 + wob() * .05), p);
             });
           } catch (e) { /* keep the music going if one note fails */ }
         },
@@ -806,7 +951,7 @@ function createSynth(ctx, dest, opts = {}) {
           bus.gain.cancelScheduledValues(now); bus.gain.setTargetAtTime(0, now, fade);
           sendBus.gain.cancelScheduledValues(now); sendBus.gain.setTargetAtTime(0, now, fade);
           // musicbox: wait for long fades before disconnecting
-          setTimeout(() => { try { bus.disconnect(); sendBus.disconnect(); } catch (e) { } }, 1500 + fade * 5000);
+          setTimeout(() => { try { bus.disconnect(); sendBus.disconnect(); } catch (e) { } stops.forEach(fn => { try { fn(); } catch (e) { } }); }, 1500 + fade * 5000);
         }
       };
     }

@@ -147,7 +147,8 @@ export function analyze(song, { limit = 12 } = {}) {
     let s = `  ${v.name.padEnd(nw)}  ${v.inst.padEnd(iw)}`;
     if (maxLayer > 0) s += `  layer ${v.layer || 0}`;
     const dice = [v.arp ? `arp ${v.arp}${v.pool === 'scale' ? ' over the scale' : ''}, every ${v.rate} step${v.rate === 1 ? '' : 's'}` : null,
-      v.chance < 1 ? `chance ${v.chance}` : null, v.jitter > 0 ? `jitter ${v.jitter} s` : null].filter(Boolean);
+      v.chance < 1 ? `chance ${v.chance}` : null, v.jitter > 0 ? `jitter ${v.jitter} s` : null,
+      v.human != null && v.human !== 1 ? `human ${v.human}` : null].filter(Boolean); // musicbox: human
     if (v.drum) s += `  ${st.n} hits`;
     else if (st.n) {
       s += `  ${(nn(st.lo) + '–' + nn(st.hi)).padEnd(8)}  ${st.n} notes`;

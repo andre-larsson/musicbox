@@ -314,7 +314,7 @@ function parse(text) {
     const v = {
       name, inst: instL, drum: isDrum, vol: 0.8, pan: 0, rev: null, trans: 0, glide: 0.07,
       gate: 1, center: 62, bright: 1, att: null, rel: null, layer: 0,
-      chance: 1, jitter: 0, arp: null, rate: 1, pool: 'chord', span: 1, ln // musicbox
+      chance: 1, jitter: 0, arp: null, rate: 1, pool: 'chord', span: 1, human: 1, ln // musicbox
     };
     for (const opt of w.slice(2)) {
       const kv = /^(\w+)=(.+)$/.exec(opt);
@@ -335,6 +335,7 @@ function parse(text) {
         // musicbox: chance and looseness, rolled each time a note comes round
         case 'chance': v.chance = num(val, 0, 1, 1); break;
         case 'jitter': v.jitter = num(val, 0, 1, 0); break;
+        case 'human': v.human = num(val, 0, 2, 1); break; // musicbox: player looseness, see synth.js
         // musicbox: arpeggiator for chords ([*], [Dm], C4+E4+G4)
         case 'arp': {
           const a = val.toLowerCase();

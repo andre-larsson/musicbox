@@ -87,6 +87,7 @@ Voice options:
 - `layer=1` the lowest intensity at which this voice plays, 0 to 9 (default 0, which always plays)
 - `chance=0.7` each note or hit plays only this fraction of the time, rolled again every time it comes round (default 1)
 - `jitter=0.2` plays each note up to this many seconds late, at random, for a loose, unquantized feel (default 0)
+- `human=0.5` how loosely the player plays (default 1). Each note lands a few milliseconds either side of the beat and a little louder or softer, and on winds, bowed strings and voices it is a few cents off. `0` plays exactly as written; `2` is twice as loose. The plain synths (`sine square saw triangle chip`) always play exactly
 - `arp=up` turns every chord this voice plays (`[*]`, `[Dm]`, `C4+E4+G4`) into an arpeggio: `up`, `down`, `updown` or `random`. Single notes play as written. See Random parts.
 - `rate=2` the arpeggio plays one note every this many steps (default 1)
 - `span=2` the arpeggio covers this many octaves, 1 to 4 (default 1)

@@ -7,6 +7,13 @@ const FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const NEUTRAL = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
 
 // spelling: 'sharp', 'flat', or 'neutral' (the usual names when the key has no sharps or flats)
+// musicbox: an eq as text: "peak 80 Hz -4 dB Q1.2, highshelf 10 kHz +2 dB"
+function eqText(bands) {
+  const hz = f => f >= 1000 ? `${+(f / 1000).toFixed(2)} kHz` : `${f} Hz`;
+  const db = g => `${g > 0 ? '+' : ''}${g} dB`;
+  return bands.map(b => [b.type, hz(b.f), /shelf|peak/.test(b.type) ? db(b.gain) : null, /pass|notch|peak/.test(b.type) ? `Q${b.q}` : null].filter(Boolean).join(' ')).join(', ');
+}
+
 function table(spell) { return spell === 'flat' ? FLAT : spell === 'sharp' ? SHARP : NEUTRAL; }
 export function pcName(pc, spell = 'neutral') { return table(spell)[((pc % 12) + 12) % 12]; }
 export function noteName(m, spell = 'neutral') {
@@ -77,8 +84,8 @@ export function analyze(song, { limit = 12 } = {}) {
   const nn = m => noteName(m, spell);
 
   const meter = `${song.beats} beats × ${song.steps} steps (${song.beats * song.steps} per bar)`;
-  const eq = song.eq && (song.eq.low || song.eq.high) ? ` · eq low ${song.eq.low} high ${song.eq.high} dB` : ''; // musicbox
-  lines.push(`"${song.title}" · ${meter} · ${song.tempo} bpm${song.key ? ' · key ' + song.key.name : ''}${eq}`);
+  lines.push(`"${song.title}" · ${meter} · ${song.tempo} bpm${song.key ? ' · key ' + song.key.name : ''}`);
+  if (song.mixEq && song.mixEq.length) lines.push(`Mix eq: ${eqText(song.mixEq)}`); // musicbox
 
   /* cues */
   lines.push('', 'Cues');
@@ -149,7 +156,7 @@ export function analyze(song, { limit = 12 } = {}) {
     if (maxLayer > 0) s += `  layer ${v.layer || 0}`;
     const dice = [v.arp ? `arp ${v.arp}${v.pool === 'scale' ? ' over the scale' : ''}, every ${v.rate} step${v.rate === 1 ? '' : 's'}` : null,
       v.chance < 1 ? `chance ${v.chance}` : null, v.jitter > 0 ? `jitter ${v.jitter} s` : null,
-      v.human != null && v.human !== 1 ? `human ${v.human}` : null, v.low ? `low ${v.low} dB` : null].filter(Boolean); // musicbox: human, low
+      v.human != null && v.human !== 1 ? `human ${v.human}` : null, v.eq && v.eq.length ? `eq ${eqText(v.eq)}` : null].filter(Boolean); // musicbox: human, eq
     if (v.drum) s += `  ${st.n} hits`;
     else if (st.n) {
       s += `  ${(nn(st.lo) + '–' + nn(st.hi)).padEnd(8)}  ${st.n} notes`;

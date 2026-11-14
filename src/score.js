@@ -144,7 +144,7 @@ function parse(text) {
   const err = (ln, msg) => errors.push({ line: ln, msg });
   const song = {
     title: 'Untitled', composer: '', about: '', tempo: 120, beats: 4, steps: 4, swing: 0,
-    reverb: 0.3, eq: { low: 0, high: 0 }, key: null, voices: [], voiceMap: {}, patterns: {}, patternOrder: [],
+    reverb: 0.3, mixEq: [], eqLines: [], key: null, voices: [], voiceMap: {}, patterns: {}, patternOrder: [],
     cues: {}, cueOrder: [], transitions: [], beds: [], bedMap: {}
   };
   let cur = null;
@@ -207,12 +207,13 @@ function parse(text) {
       case 'steps': target.steps = Math.round(num(restStr, 1, 12, 4)); break;
       case 'swing': target.swing = num(restStr, 0, 0.75, 0); break;
       case 'reverb': song.reverb = num(restStr, 0, 1, 0.3); break;
-      case 'eq': { // musicbox: tone controls for the whole mix, in dB: eq low=-2 high=1
-        for (const w of words.slice(1)) {
-          const kv = /^(\w+)=(.+)$/.exec(w), k = kv && kv[1].toLowerCase();
-          if (k === 'low' || k === 'high') song.eq[k] = num(kv[2], -12, 12, 0);
-          else err(ln, `eq takes low= and high=, in dB from -12 to 12; got "${w}".`);
-        }
+      case 'eq': { // musicbox: eq NAME band band ... (NAME is a voice, a bed, or mix); names are checked at the end
+        const name = words[1];
+        if (!name || /=/.test(name)) { err(ln, 'Write eq, then a voice, a bed or mix, then the bands: eq bass peak=80,-4,1.2'); break; }
+        const bands = [];
+        for (const w of words.slice(2)) { const b = parseEqBand(w); if (typeof b === 'string') err(ln, b); else bands.push(b); }
+        if (!words.slice(2).length) err(ln, `eq ${name} has no bands. Example: eq ${name} highshelf=8k,+2`);
+        song.eqLines.push({ name, bands, ln });
         break;
       }
       case 'key': { // musicbox
@@ -322,7 +323,7 @@ function parse(text) {
     const v = {
       name, inst: instL, drum: isDrum, vol: 0.8, pan: 0, rev: null, trans: 0, glide: 0.07,
       gate: 1, center: 62, bright: 1, att: null, rel: null, layer: 0,
-      chance: 1, jitter: 0, arp: null, rate: 1, pool: 'chord', span: 1, human: 1, low: 0, ln // musicbox
+      chance: 1, jitter: 0, arp: null, rate: 1, pool: 'chord', span: 1, human: 1, eq: null, ln // musicbox
     };
     for (const opt of w.slice(2)) {
       const kv = /^(\w+)=(.+)$/.exec(opt);
@@ -344,7 +345,7 @@ function parse(text) {
         case 'chance': v.chance = num(val, 0, 1, 1); break;
         case 'jitter': v.jitter = num(val, 0, 1, 0); break;
         case 'human': v.human = num(val, 0, 2, 1); break; // musicbox: player looseness, see synth.js
-        case 'low': v.low = num(val, -24, 12, 0); break; // musicbox: this voice's lows, in dB
+        case 'low': err(ln, `low= is now an eq line: eq ${name} lowshelf=150,-4 (or a peak= cut at the note that booms).`); break; // musicbox
         // musicbox: arpeggiator for chords ([*], [Dm], C4+E4+G4)
         case 'arp': {
           const a = val.toLowerCase();
@@ -406,7 +407,41 @@ function parse(text) {
     else { song.bedMap[name] = b; song.beds.push(b); }
   }
 
+  // musicbox: attach eq bands to their voice, bed or the whole mix
+  for (const { name, bands, ln } of song.eqLines) {
+    const target = name.toLowerCase() === 'mix' ? null : song.voiceMap[name] || song.bedMap[name];
+    if (name.toLowerCase() === 'mix') song.mixEq.push(...bands);
+    else if (!target) err(ln, `eq names a voice, a bed or mix; there is no "${name}".`);
+    else target.eq = (target.eq || []).concat(bands);
+  }
+
   return { song, errors, warnings };
+}
+
+// musicbox: one eq band, TYPE=FREQ[,GAIN][,Q], for example peak=80,-4,1.2 or highshelf=8k,+2
+const EQ_BANDS = { highpass: ['q'], lowpass: ['q'], notch: ['q'], lowshelf: ['gain'], highshelf: ['gain'], peak: ['gain', 'q'] };
+const EQ_Q = { highpass: 0.707, lowpass: 0.707, notch: 2, peak: 1 };
+function parseEqBand(w) {
+  const kv = /^(\w+)=(.+)$/.exec(w);
+  const type = kv && kv[1].toLowerCase(), fields = type && EQ_BANDS[type];
+  const usage = 'Bands are highpass=FREQ[,Q] lowpass=FREQ[,Q] lowshelf=FREQ,GAIN highshelf=FREQ,GAIN peak=FREQ,GAIN[,Q] notch=FREQ[,Q]';
+  if (!fields) return `Can't read the eq band "${w}". ${usage}, like peak=80,-4,1.2 or highshelf=8k,+2.`;
+  const parts = kv[2].split(',');
+  const fm = /^(\d+(?:\.\d+)?)(k)?(?:hz)?$/i.exec(parts[0]);
+  if (!fm) return `"${parts[0]}" in ${w} isn't a frequency. Write 80, 2.5k or 10k.`;
+  const f = parseFloat(fm[1]) * (fm[2] ? 1000 : 1);
+  if (f < 20 || f > 20000) return `${w}: the frequency must be between 20 and 20k.`;
+  if (parts.length - 1 > fields.length) return `${w} has too many values. ${usage}.`;
+  const band = { type, f, gain: 0, q: EQ_Q[type] || 0.707 };
+  for (let i = 0; i < fields.length; i++) {
+    const s = parts[i + 1];
+    if (s == null) { if (fields[i] === 'gain') return `${w} needs a gain in dB, like ${type}=${parts[0]},-3.`; continue; }
+    const n = parseFloat(s.replace(/db$/i, ''));
+    if (!isFinite(n)) return `"${s}" in ${w} isn't a number.`;
+    if (fields[i] === 'gain') { if (n < -24 || n > 24) return `${w}: the gain must be between -24 and +24 dB.`; band.gain = n; }
+    else { if (n < 0.1 || n > 20) return `${w}: Q must be between 0.1 and 20.`; band.q = n; }
+  }
+  return band;
 }
 
 /* ------------------------------------------------------- pattern bodies */
@@ -864,7 +899,7 @@ function compile(text) {
   warnings.sort((a, b) => a.line - b.line);
   return {
     title: song.title, composer: song.composer, about: song.about, tempo: song.tempo,
-    beats: song.beats, steps: song.steps, reverb: song.reverb, eq: song.eq, key: song.key,
+    beats: song.beats, steps: song.steps, reverb: song.reverb, mixEq: song.mixEq, key: song.key,
     voices, intro: cues[defaultCue].intro, loop: cues[defaultCue].loop,
     cues, cueOrder: song.cueOrder.slice(), defaultCue, transitions, beds: song.beds,
     patterns: compiled, errors, warnings, patternCount: song.patternOrder.length

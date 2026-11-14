@@ -137,6 +137,13 @@ function press(S, t, stop, depth) {
   drift(S, t, stop).connect(wg).connect(g.gain);
   return g;
 }
+// musicbox: where player i of n sits in a section, -spread (left) to +spread (right), give or take
+function seat(S, i, n, spread) {
+  if (!S.ctx.createStereoPanner) return G(S, 1);
+  const pn = S.ctx.createStereoPanner();
+  pn.pan.value = clamp((n > 1 ? (i / (n - 1)) * 2 - 1 : 0) * spread + (Math.random() - .5) * .1, -1, 1);
+  return pn;
+}
 // musicbox: the pitch starts a little flat and settles, as a player finds the note
 function scoop(oscs, t, cents, tau, p) {
   if (p && p.from) return; // already sliding into it
@@ -366,15 +373,15 @@ const INST = {
     body.connect(body2).connect(out);
     return body;
   }, play(S, out, t, d, f, v, p) {
-    // musicbox: a section of four players, each a few cents from the others, each with their own
-    // vibrato and coming in a moment apart
+    // musicbox: a section of four players across the stereo field, each a few cents from the others,
+    // each with their own vibrato and coming in a moment apart
     const g = G(S); const lp = F(S, 'lowpass', Math.min(9000, (1300 + f * 2.6) * p.bright * dynB(p)), 0.6);
     const end = adsr(g.gain, t, d, { a: p.att || .16, dc: .3, s: .9, r: p.rel || .38, peak: v * .5 });
     lp.connect(press(S, t, end, .04)).connect(g).connect(out);
     for (let i = 0; i < 4; i++) {
       const o = O(S, 'sawtooth', f, t, end, p, 1, (Math.random() * 2 - 1) * 9);
       const og = G(S); og.gain.setValueAtTime(0, t); og.gain.setTargetAtTime(.19, t + Math.random() * .035, .015);
-      o.connect(og).connect(lp);
+      o.connect(og).connect(seat(S, i, 4, .5)).connect(lp);
       scoop([o], t, 10, .05, p);
       vibrato(S, t, end, [o], { rate: 5.3, depth: 8, delay: .15, rise: .4, wander: 3 });
     }
@@ -400,7 +407,7 @@ const INST = {
     for (let i = 0; i < 3; i++) {
       const o = O(S, 'sawtooth', f, t, end, p, 1, (Math.random() * 2 - 1) * 7);
       const og = G(S); og.gain.setValueAtTime(0, t); og.gain.setTargetAtTime(.82, t + Math.random() * .02, .006);
-      o.connect(og).connect(lp);
+      o.connect(og).connect(seat(S, i, 3, .35)).connect(lp);
       scoop([o], t, 22, .025, p);
       vibrato(S, t, end, [o], { rate: 5.2, depth: 5, delay: .35, rise: .3, wander: 2 });
     }
@@ -550,22 +557,23 @@ const INST = {
     noise(S, out, t, { type: 'lowpass', f: 900, q: .5, tau: .01, peak: v * .12 });
   } },
   fretless: { cents: 3, rev: 0.12, level: 0.69, play(S, out, t, d, f, v, p) {
-    const g = G(S); const lp = F(S, 'lowpass', 300, 3.2);
-    lp.connect(g).connect(out);
+    // musicbox: the string's harmonics (a sawtooth) through a filter that opens as the finger plucks
+    // and settles around the 4th harmonic, with the fretless "mwah", a resonance near the 3rd. A
+    // high-pass that follows the note trims the fundamental: a real bass's weight is in its 2nd to
+    // 5th harmonics; a sine-heavy bass booms on a subwoofer and sounds thin in the upper bass.
+    const g = G(S), hp = F(S, 'highpass', f * 1.2, .7), lp = F(S, 'lowpass', 300, .7), lp2 = F(S, 'lowpass', 300, .7), mwah = F(S, 'peaking', f * 2.5 + 120, 1.5, 2.5);
+    hp.connect(lp).connect(lp2).connect(mwah).connect(g).connect(out);
     const end = adsr(g.gain, t, d, { a: p.att || .012, dc: .6, s: .72, r: p.rel || .08, peak: v * .6 });
-    const top = Math.min(4000, (f * 4.5 + 250) * p.bright * dynB(p)); // musicbox: dynB
-    lp.frequency.setValueAtTime(f * 1.2 + 80, t);
-    lp.frequency.linearRampToValueAtTime(top, t + .07);
-    lp.frequency.setTargetAtTime(f * 2.2 + 150, t + .07, .25);
-    const o1 = O(S, 'sawtooth', f, t, end, p); const g1 = G(S, .38); o1.connect(g1).connect(lp);
-    // musicbox: on the lowest notes a real bass's fundamental is weaker than a pure sine's; move some
-    // of it up an octave, so the note sounds as full without booming (all of it from 40 Hz down)
-    const deep = clamp((75 - f) / 35, 0, 1);
-    const o2 = O(S, 'sine', f, t, end, p); const g2 = G(S, .75 * (1 - .5 * deep)); o2.connect(g2).connect(lp);
-    const o3 = O(S, 'sine', f, t, end, p, 2); const g3 = G(S, .32 * deep); o3.connect(g3).connect(lp);
-    // musicbox: a fretless player slides into some notes; a soft thump of the finger on the string
-    scoop([o1, o2, o3], t, Math.random() < .3 ? 35 : 6, .04, p);
-    vibrato(S, t, end, [o1, o2, o3], { rate: 4.5, depth: 6, delay: .3, rise: .4, wander: 2 });
+    const db = dynB(p), top = Math.min(4000, (f * 5 + 250) * p.bright * db), rest = Math.min(2500, (f * 3 + 120) * p.bright * db);
+    for (const l of [lp, lp2]) { // two stages: a steep slope above the 4th harmonic
+      l.frequency.setValueAtTime(f * 2 + 100, t);
+      l.frequency.linearRampToValueAtTime(top, t + .02);
+      l.frequency.setTargetAtTime(rest, t + .02, .25);
+    }
+    const o1 = O(S, 'sawtooth', f, t, end, p); o1.connect(hp);
+    // a fretless player slides into some notes; a soft thump of the finger on the string
+    scoop([o1], t, Math.random() < .3 ? 35 : 6, .04, p);
+    vibrato(S, t, end, [o1], { rate: 4.5, depth: 6, delay: .3, rise: .4, wander: 2 });
     noise(S, out, t, { type: 'lowpass', f: 700, q: .7, tau: .012, peak: v * .1 });
   } },
   synbass: { loose: 0.3, rev: 0.08, level: 0.76, play(S, out, t, d, f, v, p) {
@@ -620,7 +628,7 @@ function choirVoice(S, out, t, d, f, v, p) {
   for (let i = 0; i < 3; i++) {
     const o = O(S, 'sawtooth', f, t, end, p, 1, (Math.random() * 2 - 1) * 10);
     const og = G(S); og.gain.setValueAtTime(0, t); og.gain.setTargetAtTime(.41, t + Math.random() * .06, .03);
-    o.connect(og).connect(g);
+    o.connect(og).connect(seat(S, i, 3, .45)).connect(g);
     scoop([o], t, 14, .05, p);
     vibrato(S, t, end, [o], { rate: 5.1, depth: 11, delay: .2, rise: .5, wander: 4 });
   }
@@ -819,6 +827,15 @@ const BED = {
 };
 
 /* ----------------------------------------------------------------- engine */
+// musicbox: parametric eq. A band is { type, f, gain, q }: highpass, lowpass, lowshelf, highshelf,
+// peak or notch, the filters a DAW's eq uses. Returns the first and last filter, or null.
+const EQ_TYPE = { highpass: 'highpass', lowpass: 'lowpass', lowshelf: 'lowshelf', highshelf: 'highshelf', peak: 'peaking', notch: 'notch' };
+function eqChain(S, bands) {
+  if (!bands || !bands.length) return null;
+  const fs = bands.map(b => F(S, EQ_TYPE[b.type], b.f, b.q, b.gain || 0));
+  for (let i = 1; i < fs.length; i++) fs[i - 1].connect(fs[i]);
+  return [fs[0], fs[fs.length - 1]];
+}
 function makeIR(ctx, seconds, decayPow) {
   const sr = ctx.sampleRate, len = Math.floor(sr * seconds);
   const buf = ctx.createBuffer(2, len, sr);
@@ -848,11 +865,18 @@ function createSynth(ctx, dest, opts = {}) {
 
   const master = G(S, 0.72);
   // musicbox: mastering. A subsonic filter first: below about 32 Hz there is nothing musical, only
-  // rumble that costs headroom and makes small subwoofers boom. Then the score's tone controls
-  // (eq low= high=); the low shelf was a fixed +2 dB at 180 Hz, which made every mix bass-heavy.
+  // rumble that costs headroom and makes small subwoofers boom. Then the score's mix eq (eq mix ...).
+  // Scrimshaw had a fixed +2 dB low shelf at 180 Hz and -2.5 dB high shelf at 7.5 kHz here, to warm
+  // and soften raw oscillators; the instruments do that themselves now, so the master is neutral.
   const sub1 = F(S, 'highpass', 32, .54), sub2 = F(S, 'highpass', 32, 1.31);
-  const lowShelf = F(S, 'lowshelf', 150, .7, 0);
-  const highShelf = F(S, 'highshelf', 7500, .7, -2.5);
+  const mixIn = G(S, 1), mixOut = G(S, 1); mixIn.connect(mixOut);
+  let mixKey = '[]', mixNodes = null;
+  const setMixEq = bands => {
+    const key = JSON.stringify(bands || []); if (key === mixKey) return; mixKey = key;
+    mixIn.disconnect(); if (mixNodes) mixNodes[1].disconnect();
+    mixNodes = eqChain(S, bands);
+    if (mixNodes) { mixIn.connect(mixNodes[0]); mixNodes[1].connect(mixOut); } else mixIn.connect(mixOut);
+  };
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -15; comp.knee.value = 10; comp.ratio.value = 3.2; comp.attack.value = 0.006; comp.release.value = 0.22;
   const out = G(S, 1);
@@ -861,7 +885,7 @@ function createSynth(ctx, dest, opts = {}) {
   if (opts.raw) {
     // measurement chain: rough K-weighting, no compression
     master.connect(F(S, 'highpass', 60, .7)).connect(F(S, 'highshelf', 1500, .7, 4)).connect(out).connect(dest);
-  } else master.connect(sub1).connect(sub2).connect(lowShelf).connect(highShelf).connect(comp).connect(limiter).connect(out).connect(dest);
+  } else { master.connect(sub1).connect(sub2).connect(mixIn); mixOut.connect(comp).connect(limiter).connect(out).connect(dest); }
   const analyser = ctx.createAnalyser(); analyser.fftSize = 1024; out.connect(analyser);
 
   const verb = ctx.createConvolver(); verb.buffer = makeIR(ctx, 2.8, 3.4);
@@ -870,7 +894,7 @@ function createSynth(ctx, dest, opts = {}) {
   verbIn.connect(verb).connect(verbRet).connect(master);
 
   return {
-    S, master, out, analyser, verbRet,
+    S, master, out, analyser, verbRet, comp, limiter, // musicbox: comp and limiter, for meters
     // a session bus lets "stop" silence everything already scheduled
     // build plucked-string buffers ahead of time, a few at a time
     warm(song, budgetMs = 12) {
@@ -902,8 +926,9 @@ function createSynth(ctx, dest, opts = {}) {
       const def = BED[b.inst];
       const input = G(S, 0);
       const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-      if (pan) { pan.pan.value = b.pan || 0; input.connect(pan).connect(master); } else input.connect(master);
-      const send = G(S, b.rev != null ? b.rev : def.rev); input.connect(send).connect(verbIn);
+      const eqc = eqChain(S, b.eq), post = eqc ? (input.connect(eqc[0]), eqc[1]) : input; // musicbox: the bed's eq
+      if (pan) { pan.pan.value = b.pan || 0; post.connect(pan).connect(master); } else post.connect(master);
+      const send = G(S, b.rev != null ? b.rev : def.rev); post.connect(send).connect(verbIn);
       const t = ctx.currentTime + 0.02;
       const srcs = def.make(S, input, t, { bright: b.bright || 1, swell: b.swell || def.swell, note: b.note });
       let stopped = false;
@@ -925,16 +950,14 @@ function createSynth(ctx, dest, opts = {}) {
       const bus = G(S, 1); bus.connect(master);
       const sendBus = G(S, 1); sendBus.connect(verbIn);
       verbRet.gain.setValueAtTime(0.25 + 1.6 * (song.reverb != null ? song.reverb : 0.3), ctx.currentTime);
-      const eq = song.eq || {}; // musicbox: the score's tone controls
-      lowShelf.gain.setTargetAtTime(eq.low || 0, ctx.currentTime, 0.05);
-      highShelf.gain.setTargetAtTime(-2.5 + (eq.high || 0), ctx.currentTime, 0.05);
+      setMixEq(song.mixEq); // musicbox: the score's mix eq
       const stops = []; // musicbox: cleanups for voice bodies
       const ch = song.voices.map(v => {
         const def = v.drum ? DRUM[v.inst] : INST[v.inst];
         const input = G(S, v.vol * def.level);
         const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-        // musicbox: low= turns this voice's lows (below about 150 Hz) up or down, before the reverb
-        const post = v.low ? input.connect(F(S, 'lowshelf', 150, .7, v.low)) : input;
+        // musicbox: the voice's eq, before the pan and the reverb send
+        const eqc = eqChain(S, v.eq), post = eqc ? (input.connect(eqc[0]), eqc[1]) : input;
         if (pan) { pan.pan.value = v.pan; post.connect(pan).connect(bus); } else post.connect(bus);
         const send = G(S, v.rev != null ? v.rev : def.rev); post.connect(send).connect(sendBus);
         // musicbox: an instrument's body (a violin's resonances, a choir's vowel) is built once per

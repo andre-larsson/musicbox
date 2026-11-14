@@ -164,16 +164,21 @@ test('layer= and key are parsed', () => {
   assert.match(compile('key H minor').errors[0].msg, /Can't read the key/);
 });
 
-test('eq, low= and human= are parsed', () => {
-  const s = compile('eq low=-3 high=1.5\nvoice a fretless low=-6 human=0.5\nvoice b flute\npattern A\na | A1:16 |\nb | A4:16 |\nloop A');
+test('eq lines and human= are parsed', () => {
+  const s = compile('voice a fretless human=0.5\nvoice b flute\nbed sea sea\neq a peak=80,-4,1.2 highpass=35\neq a notch=2.5k\neq sea lowshelf=120,-3\neq mix highshelf=10k,+2\npattern A\na | A1:16 |\nb | A4:16 |\nloop A');
   assert.deepEqual(s.errors, []);
-  assert.deepEqual(s.eq, { low: -3, high: 1.5 });
-  assert.equal(s.voices[0].low, -6);
+  assert.deepEqual(s.voices[0].eq, [{ type: 'peak', f: 80, gain: -4, q: 1.2 }, { type: 'highpass', f: 35, gain: 0, q: 0.707 }, { type: 'notch', f: 2500, gain: 0, q: 2 }]);
+  assert.equal(s.voices[1].eq, null);
+  assert.deepEqual(s.beds[0].eq, [{ type: 'lowshelf', f: 120, gain: -3, q: 0.707 }]);
+  assert.deepEqual(s.mixEq, [{ type: 'highshelf', f: 10000, gain: 2, q: 0.707 }]);
   assert.equal(s.voices[0].human, 0.5);
-  assert.equal(s.voices[1].low, 0);
   assert.equal(s.voices[1].human, 1);
-  assert.deepEqual(compile('voice a flute\npattern A\na | A4:16 |\nloop A').eq, { low: 0, high: 0 });
-  assert.match(compile('eq bass=2').errors[0].msg, /eq takes low= and high=/);
+  const bad = m => compile('voice a flute\n' + m + '\npattern A\na | A4:16 |\nloop A').errors.map(e => e.msg).join(' | ');
+  assert.match(bad('eq b peak=80,-4'), /there is no "b"/);
+  assert.match(bad('eq a peak=80'), /needs a gain/);
+  assert.match(bad('eq a shelf=1k,2'), /Can't read the eq band/);
+  assert.match(bad('eq a highpass=5'), /between 20 and 20k/);
+  assert.match(bad('voice c flute low=-4'), /low= is now an eq line/);
 });
 
 test('analyze flags out-of-range notes and non-chord tones', () => {

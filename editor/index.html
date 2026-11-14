@@ -25,7 +25,6 @@
   select, button { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
   button { cursor: pointer; }
   button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
-  button.on { outline: 2px solid var(--accent); outline-offset: 1px; font-weight: 600; }
   button.small { padding: 3px 8px; font-size: 12px; }
   button:disabled { opacity: .5; cursor: default; }
   button svg { width: 14px; height: 14px; fill: currentColor; display: block; flex: none; }
@@ -48,13 +47,15 @@
   .transport .primary { display: inline-flex; gap: 6px; align-items: center; min-width: 6.5em; justify-content: center; }
   .transport .icon { display: inline-grid; place-items: center; width: 34px; height: 32px; padding: 0; }
   .cues { display: flex; flex-wrap: wrap; gap: 6px; }
+  /* the cue playing: a tinted fill and a 2px border (inset, so nothing moves). The outline stays for focus. */
+  .cues button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 18%, var(--panel)); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .vol { margin-left: auto; }
   .timeline { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: end; }
   .time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding-bottom: 10px; min-width: 2.8em; }
   .time.end { text-align: right; }
   .track { position: relative; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: pan-y; border-radius: 6px; }
   .track:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-  .tl-parts { position: relative; height: 18px; }
+  .tl-parts { position: relative; height: 22px; }
   .tl-part { position: absolute; top: 0; padding-left: 3px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tl-part.loop { color: var(--accent); font-weight: 600; }
   .tl-part.then { right: 0; text-transform: none; letter-spacing: 0; }
@@ -70,9 +71,10 @@
   .tl-sec.first { border-left: 2px solid var(--accent); }
   .tl-sec.rnd span { text-decoration: underline dotted; text-underline-offset: 3px; }
   .tl-sec small { font-weight: normal; color: var(--muted); }
-  .tl-head { position: absolute; top: 14px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--ink); pointer-events: none; }
-  .tl-head::before { content: ""; position: absolute; top: -2px; left: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
-  .tl-ghost { position: absolute; top: 18px; bottom: 0; width: 1px; background: var(--ink); opacity: .4; pointer-events: none; }
+  /* the playhead's knob sits on the strip's top edge, below the Intro and Loop labels */
+  .tl-head { position: absolute; top: 22px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--ink); pointer-events: none; }
+  .tl-head::before { content: ""; position: absolute; top: -5px; left: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
+  .tl-ghost { position: absolute; top: 22px; bottom: 0; width: 1px; background: var(--ink); opacity: .4; pointer-events: none; }
   .tl-tip { position: absolute; top: -8px; transform: translateY(-100%); padding: 3px 7px; border-radius: 4px; font-size: 12px; white-space: nowrap; background: var(--ink); color: var(--panel); pointer-events: none; z-index: 2; }
   .track.empty .tl-secs::before { content: "Nothing to play in this cue"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
   #status { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; min-height: 1.45em; }
@@ -85,6 +87,7 @@
   #mixer:empty { display: none; }
   #mixer .label { margin-right: 4px; }
   #mixer .label:not(:first-child) { margin-left: 10px; }
+  #mixer .hint { margin-left: 4px; }
   .chip { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
   .chip button { border: 0; border-radius: 0; padding: 4px 8px; background: var(--bg); }
   .chip small { color: var(--muted); margin-left: 5px; }
@@ -102,18 +105,28 @@
   textarea { width: 100%; height: 70vh; resize: vertical; border: 1px solid var(--line); border-radius: 6px; background: var(--code); color: var(--ink); padding: 10px; font: 12.5px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre; tab-size: 8; }
   pre { margin: 0; white-space: pre-wrap; font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; overflow-x: auto; }
   #problems { list-style: none; margin: 0; padding: 0; font-size: 13px; }
-  #problems li { padding: 4px 6px; border-radius: 4px; cursor: pointer; }
-  #problems li:hover { background: var(--code); }
+  #problems button { display: block; width: 100%; padding: 4px 6px; border: 0; border-radius: 4px; background: none; text-align: left; }
+  #problems button:hover { background: var(--code); }
   #problems .error { color: var(--err); }
   #problems .warning { color: var(--warn); }
-  #problems .ok { color: var(--muted); cursor: default; }
-  #note { color: var(--muted); font-size: 12px; min-height: 1.45em; margin-top: 4px; }
+  #problems .ok { padding: 4px 6px; color: var(--muted); }
   .hint { color: var(--muted); font-size: 12px; font-weight: normal; text-transform: none; letter-spacing: 0; }
+  .hint.edited { color: var(--warn); }
+  /* messages: a toast at the bottom of the window, wherever the page is scrolled */
+  #note {
+    position: fixed; left: 50%; bottom: 16px; z-index: 10; width: max-content; max-width: min(560px, calc(100vw - 32px));
+    padding: 8px 14px; border-radius: 8px; background: var(--ink); color: var(--panel); font-size: 13px;
+    box-shadow: 0 6px 20px rgb(0 0 0 / .2); pointer-events: none;
+    opacity: 0; transform: translate(-50%, 8px); transition: opacity .2s, transform .2s;
+  }
+  #note.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { #note { transition: none; } }
 
   /* master: the chain, the scope, the meters and the mix eq */
-  .chain { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; }
-  .chain li { position: relative; }
-  .chain li:not(:last-child)::after { content: "→"; position: absolute; right: -14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  /* the arrow leads each stage, so a line that wraps starts with one instead of ending on one */
+  .chain { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+  .chain li { display: flex; align-items: center; gap: 6px; }
+  .chain li + li::before { content: "→"; content: "→" / ""; color: var(--muted); }
   .chain button { padding: 2px 9px; border-radius: 999px; font-size: 12px; background: var(--panel); }
   .chain button:hover { border-color: var(--muted); }
   .chain small { color: var(--muted); margin-left: 3px; }
@@ -234,7 +247,6 @@
   <section class="card">
     <h2>Score <span class="hint" id="hint">Ctrl+Enter applies edits</span></h2>
     <textarea id="score" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Score text"></textarea>
-    <div id="note"></div>
   </section>
   <div class="side">
     <section class="card">
@@ -246,7 +258,7 @@
         <button id="bypass" class="small" type="button" aria-pressed="false" title="Listen without the mix eq, to compare">Bypass eq</button></h2>
       <ol class="chain" aria-label="The mastering chain, in order. Each stage jumps to its controls.">
         <li><button type="button" data-stage="gain">Gain <small id="cGain">0 dB</small></button></li>
-        <li><button type="button" data-stage="highpass">High pass filter <small id="cHighpass">32 Hz</small></button></li>
+        <li><button type="button" data-stage="highpass">High pass <small id="cHighpass">32 Hz</small></button></li>
         <li><button type="button" data-stage="eq" class="eq">Mix eq <small id="cEq">neutral</small></button></li>
         <li><button type="button" data-stage="comp">Compressor <small id="cComp">−15 dB · 3.2:1</small></button></li>
         <li><button type="button" data-stage="limit">Limiter <small id="cLimit">−3 dB</small></button></li>
@@ -316,6 +328,7 @@
     </section>
   </div>
 </main>
+<div id="note" role="status" aria-live="polite"></div>
 <script type="module" src="editor.js"></script>
 </body>
 </html>

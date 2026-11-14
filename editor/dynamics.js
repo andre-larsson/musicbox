@@ -49,7 +49,7 @@ export function createDynamics(root, { onChange }) {
     for (const k in ctl) {
       const c = ctl[k];
       c.out.textContent = c.fmt(val(k));
-      const off = c.on && !c.on.checked;
+      const off = !!(c.on && !c.on.checked);   // gain has no switch: toggle(name, undefined) would flip it
       c.el.disabled = off;
       c.el.closest('.ctl').classList.toggle('off', off);
     }

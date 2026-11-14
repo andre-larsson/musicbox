@@ -38,8 +38,11 @@ function show(s) {
   for (const p of items) {
     const li = document.createElement('li');
     li.className = p.kind;
-    li.textContent = `line ${p.line}: ${p.msg}`;
-    li.onclick = () => jumpTo(p.line);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = `line ${p.line}: ${p.msg}`;
+    b.onclick = () => jumpTo(p.line);
+    li.append(b);
     ui.problems.append(li);
   }
   ui.analysis.textContent = s.errors.length ? '' : analyze(s).text;
@@ -71,9 +74,14 @@ function renderCues() {
     };
     ui.cues.append(b);
   }
+  // Lowering max clamps the slider's value without an input event, so read the value back after.
+  // A slider at the top stays at the top, so every layer still plays in a score with more of them.
   const layers = Math.max(0, ...s.voices.map(v => v.layer || 0), ...(s.beds || []).map(b => b.layer || 0));
+  const atTop = +ui.intensity.value >= +ui.intensity.max;
   ui.intensity.max = String(Math.max(1, layers));
-  if (+ui.intensity.value > layers) { ui.intensity.value = String(layers); ui.intensityVal.textContent = String(layers); }
+  if (atTop || +ui.intensity.value > layers) ui.intensity.value = String(layers);
+  ui.intensityVal.textContent = ui.intensity.value;
+  player.setIntensity(+ui.intensity.value);
   ui.intensity.disabled = layers === 0;
   renderMixer();
 }
@@ -82,6 +90,7 @@ function renderCues() {
 // together). Names stay muted or soloed across edits and reloads while the page is open.
 const muted = new Set(), soloed = new Set();
 let usedBy = {};   // cue name -> set of voice indexes that play in it
+let unmuteAll = null;
 
 function voicesByCue(s) {
   const out = {};
@@ -114,7 +123,8 @@ function renderMixer() {
       const chip = document.createElement('span');
       chip.className = 'chip'; chip.dataset.name = name; chip.dataset.layer = layer || 0;
       const m = document.createElement('button'); m.className = 'name';
-      m.innerHTML = `${name}<small>${kind}</small>`;
+      m.textContent = name;
+      if (kind && kind !== name) { const k = document.createElement('small'); k.textContent = kind; m.append(k); }
       m.onclick = () => { if (muted.has(name)) muted.delete(name); else muted.add(name); applyMix(); };
       const so = document.createElement('button'); so.className = 'solo'; so.textContent = 'S';
       so.title = `Solo ${name}: hear it alone (solo others to add them)`;
@@ -126,14 +136,18 @@ function renderMixer() {
   add('Voices', s.voices.map(v => ({ name: v.name, kind: v.inst, layer: v.layer })));
   add('Beds', (s.beds || []).map(b => ({ name: b.name, kind: b.inst, layer: b.layer })));
   const reset = document.createElement('button'); reset.textContent = 'Unmute all';
+  reset.title = 'Unmute every voice and bed, and clear the solos';
   reset.onclick = () => { muted.clear(); soloed.clear(); applyMix(); };
-  ui.mixer.append(reset);
+  const hint = document.createElement('span'); hint.className = 'hint'; hint.textContent = 'Click a name to mute it, S to solo it';
+  ui.mixer.append(reset, hint);
+  unmuteAll = reset;
   applyMix();
 }
 
 // Dim the voices that can't be heard right now: not in the cue playing, or above the intensity
 function updateMixer(st) {
   if (!playable) return;
+  if (unmuteAll) unmuteAll.disabled = !muted.size && !soloed.size;
   const cue = st.playing ? (st.cue || st.target) : null, c = cue && playable.cues[cue];
   const bedIdx = new Map((playable.beds || []).map(b => [b.name, b]));
   playable.voices.forEach((v, i) => mark(v.name, c && !usedBy[cue].has(i) ? `${v.name} doesn't play in ${cue}` :
@@ -157,9 +171,10 @@ function updateMixer(st) {
 function apply(reason) {
   song = compile(ui.score.value);
   show(song);
-  if (song.errors.length) { ui.note.textContent = `${reason ? reason + ' · ' : ''}not applied: fix the errors first`; return; }
+  if (song.errors.length) { say('Not applied: fix the errors in Problems first'); markEdited(); return; }
   playable = song;
   appliedText = ui.score.value;
+  markEdited();
   heard = {};
   if (!viewCue || !playable.cues[viewCue]) viewCue = playable.defaultCue;
   master.setBands(playable.mixEq);
@@ -172,12 +187,32 @@ function apply(reason) {
     player.load(playable);
     player.goto(cue, { restart: true, at: 'bar', via: false });
   }
-  ui.note.textContent = reason ? `${reason} · ${new Date().toLocaleTimeString()}` : '';
+  say(reason ? `${reason} · ${new Date().toLocaleTimeString()}` : '');
 }
 
-async function openFile(path, reason) {
+// Messages show as a toast at the bottom of the window, so they are seen wherever the page is
+// scrolled. The element is a live region that stays in place, so screen readers announce them too.
+let noteTimer = 0;
+function say(msg) {
+  clearTimeout(noteTimer);
+  ui.note.classList.toggle('show', !!msg);
+  if (!msg) { noteTimer = setTimeout(() => { ui.note.textContent = ''; }, 300); return; }
+  ui.note.textContent = msg;
+  noteTimer = setTimeout(() => say(''), Math.min(10000, 3000 + msg.length * 50));
+}
+
+// The score card's hint says when the text has edits the music isn't playing yet.
+let baseHint = ui.hint.textContent;
+function markEdited() {
+  const edited = appliedText != null && ui.score.value !== appliedText;
+  ui.hint.classList.toggle('edited', edited);
+  ui.hint.textContent = edited ? 'Edits not applied yet · Ctrl+Enter applies them' : baseHint;
+}
+
+// `reason` is the message to show; '' loads quietly.
+async function openFile(path, reason = `Loaded ${path}`) {
   const res = await fetch('../' + path, { cache: 'no-store' });
-  if (!res.ok) { ui.note.textContent = `Can't load ${path} (${res.status})`; return; }
+  if (!res.ok) { say(`Can't load ${path} (${res.status})`); return; }
   current = path;
   viewCue = null;
   ui.score.value = await res.text();
@@ -186,7 +221,7 @@ async function openFile(path, reason) {
   url.searchParams.set('score', path);
   url.hash = '';
   history.replaceState(null, '', url);
-  apply(reason || `Loaded ${path}`);
+  apply(reason);
 }
 
 // A static build (GitHub Pages) lists its scores in scores/index.json, written by
@@ -207,7 +242,7 @@ async function listFiles() {
 // A listen link carries the whole score in the hash (#score=…); see src/link.js.
 async function openLink(code) {
   let text;
-  try { text = await decodeScore(code); } catch { ui.note.textContent = "Can't read the score in this link. It may have been cut short when it was copied."; return false; }
+  try { text = await decodeScore(code); } catch { say("Can't read the score in this link. It may have been cut short when it was copied."); return false; }
   current = null;
   viewCue = null;
   let o = ui.file.querySelector('option[data-link]');
@@ -221,7 +256,8 @@ async function openLink(code) {
 async function init() {
   let { files, dev } = await listFiles();
   if (!files.length) files = ['scores/demo/tide-caves.scrim'];
-  ui.hint.textContent = dev ? 'Ctrl+Enter applies edits · files reload when saved' : 'Ctrl+Enter applies edits';
+  baseHint = dev ? 'Ctrl+Enter applies edits · files reload when saved' : 'Ctrl+Enter applies edits';
+  markEdited();
   for (const f of files) {
     const o = document.createElement('option'); o.value = f; o.textContent = f.replace(/^scores\//, ''); ui.file.append(o);
   }
@@ -229,7 +265,7 @@ async function init() {
   const first = files.includes(wanted) ? wanted : (files.includes('scores/demo/tide-caves.scrim') ? 'scores/demo/tide-caves.scrim' : files[0]);
   ui.file.value = first;
   const code = scoreCode(location.hash);
-  if (!code || !(await openLink(code))) await openFile(first);
+  if (!code || !(await openLink(code))) await openFile(first, '');
   addEventListener('hashchange', () => { const c = scoreCode(location.hash); if (c) openLink(c); });
 
   if (dev) try {
@@ -345,7 +381,7 @@ const master = createMaster({
   },
   onBypass(on) {
     if (player.syn) player.syn.bypassMixEq(on);
-    ui.note.textContent = on ? 'Bypassing the mix eq: you hear the mix without it' : '';
+    say(on ? 'Bypassing the mix eq: you hear the mix without it' : '');
   }
 });
 function meterEls(sel) { const m = $(sel); return { bar: m.querySelector('.mbar'), out: m.querySelector('output'), sub: m.querySelector('.sub') }; }
@@ -400,7 +436,8 @@ function writeMastering(change) {
       song = s; playable = s; appliedText = text;
       show(s);
       if (player.song) player.load(playable);
-      ui.note.textContent = line ? `${what} written to line ${line}` : `${what} line removed: the default`;
+      markEdited();
+      say(line ? `${what} written to line ${line}` : `${what} line removed: the default`);
       return;
     }
   }
@@ -408,7 +445,8 @@ function writeMastering(change) {
     playable = Object.assign({}, playable, change);
     if (player.song) player.load(playable);
   }
-  ui.note.textContent = `${what} written${line ? ` to line ${line}` : ''}. Your other edits aren't applied yet: Ctrl+Enter applies them`;
+  markEdited();
+  say(`${what} written${line ? ` to line ${line}` : ''}. Your other edits aren't applied yet: Ctrl+Enter applies them`);
 }
 
 // Change the score text with as small an edit as possible, through the browser's own editing, so
@@ -432,17 +470,24 @@ function replaceScore(next) {
   ta.scrollTop = top;
   if (focus && focus !== ta && focus.focus) focus.focus({ preventScroll: true }); else if (focus !== ta) ta.blur();
 }
+let shareTimer = 0;
 ui.share.onclick = async () => {
   const url = await scoreLink(ui.score.value, location.origin + location.pathname);
   history.replaceState(null, '', url);
-  try { await navigator.clipboard.writeText(url); ui.note.textContent = 'Copied a link to this score (with any unapplied edits)'; }
-  catch { ui.note.textContent = 'The link to this score is in the address bar'; }
+  try {
+    await navigator.clipboard.writeText(url);
+    ui.share.textContent = 'Copied';
+    clearTimeout(shareTimer);
+    shareTimer = setTimeout(() => { ui.share.textContent = 'Copy link'; }, 2000);
+    say('Copied a link to this score, with any unapplied edits');
+  } catch { say('The link to this score is in the address bar'); }
 };
 ui.intensity.oninput = () => {
   ui.intensityVal.textContent = ui.intensity.value;
   player.setIntensity(+ui.intensity.value);
 };
 ui.volume.oninput = () => player.setVolume(+ui.volume.value);
+ui.score.addEventListener('input', markEdited);
 ui.score.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); apply('Applied edits'); }
 });
@@ -482,7 +527,8 @@ function tick() {
   master.frame(mode);
 
   for (const b of ui.cues.querySelectorAll('button')) {
-    b.classList.toggle('on', st.playing && b.dataset.cue === (st.cue || st.target));
+    const on = String(!!st.playing && b.dataset.cue === (st.cue || st.target));
+    if (b.getAttribute('aria-pressed') !== on) b.setAttribute('aria-pressed', on);
     b.title = st.playing ? `Switch to ${b.dataset.cue}` : `Play ${b.dataset.cue}`;
   }
   updateMixer(st);

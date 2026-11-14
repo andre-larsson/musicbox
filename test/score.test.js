@@ -164,6 +164,18 @@ test('layer= and key are parsed', () => {
   assert.match(compile('key H minor').errors[0].msg, /Can't read the key/);
 });
 
+test('eq, low= and human= are parsed', () => {
+  const s = compile('eq low=-3 high=1.5\nvoice a fretless low=-6 human=0.5\nvoice b flute\npattern A\na | A1:16 |\nb | A4:16 |\nloop A');
+  assert.deepEqual(s.errors, []);
+  assert.deepEqual(s.eq, { low: -3, high: 1.5 });
+  assert.equal(s.voices[0].low, -6);
+  assert.equal(s.voices[0].human, 0.5);
+  assert.equal(s.voices[1].low, 0);
+  assert.equal(s.voices[1].human, 1);
+  assert.deepEqual(compile('voice a flute\npattern A\na | A4:16 |\nloop A').eq, { low: 0, high: 0 });
+  assert.match(compile('eq bass=2').errors[0].msg, /eq takes low= and high=/);
+});
+
 test('analyze flags out-of-range notes and non-chord tones', () => {
   const s = compile('key C major\nvoice lead flute\npattern A\nharmony | C | G |\nlead | C3:16 | F#5:16 |\nloop A');
   const { text, findings } = analyze(s);

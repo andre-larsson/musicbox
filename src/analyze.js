@@ -77,7 +77,8 @@ export function analyze(song, { limit = 12 } = {}) {
   const nn = m => noteName(m, spell);
 
   const meter = `${song.beats} beats × ${song.steps} steps (${song.beats * song.steps} per bar)`;
-  lines.push(`"${song.title}" · ${meter} · ${song.tempo} bpm${song.key ? ' · key ' + song.key.name : ''}`);
+  const eq = song.eq && (song.eq.low || song.eq.high) ? ` · eq low ${song.eq.low} high ${song.eq.high} dB` : ''; // musicbox
+  lines.push(`"${song.title}" · ${meter} · ${song.tempo} bpm${song.key ? ' · key ' + song.key.name : ''}${eq}`);
 
   /* cues */
   lines.push('', 'Cues');
@@ -148,7 +149,7 @@ export function analyze(song, { limit = 12 } = {}) {
     if (maxLayer > 0) s += `  layer ${v.layer || 0}`;
     const dice = [v.arp ? `arp ${v.arp}${v.pool === 'scale' ? ' over the scale' : ''}, every ${v.rate} step${v.rate === 1 ? '' : 's'}` : null,
       v.chance < 1 ? `chance ${v.chance}` : null, v.jitter > 0 ? `jitter ${v.jitter} s` : null,
-      v.human != null && v.human !== 1 ? `human ${v.human}` : null].filter(Boolean); // musicbox: human
+      v.human != null && v.human !== 1 ? `human ${v.human}` : null, v.low ? `low ${v.low} dB` : null].filter(Boolean); // musicbox: human, low
     if (v.drum) s += `  ${st.n} hits`;
     else if (st.n) {
       s += `  ${(nn(st.lo) + '–' + nn(st.hi)).padEnd(8)}  ${st.n} notes`;

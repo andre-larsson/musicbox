@@ -48,6 +48,7 @@ beats    4           # beats per bar, 1 to 16 (default 4)
 steps    4           # steps per beat, 1 to 12 (default 4)
 swing    0.12        # delays every other step, 0 to 0.75 (default 0)
 reverb   0.3         # overall reverb, 0 to 1 (default 0.3)
+eq       low=-2 high=1   # tone controls for the whole mix, in dB, -12 to 12 (default 0)
 key      D dorian    # optional; the checker uses it to point out notes outside the key
 ```
 
@@ -58,6 +59,8 @@ A step is the smallest unit of rhythm. Every bar holds exactly beats × steps st
 - `beats 3` `steps 2`: a 3/4 waltz in eighths, 6 steps per bar
 - `beats 2` `steps 3`: a 6/8 jig, 6 steps per bar (tempo counts dotted quarters)
 - `beats 4` `steps 3`: a 12/8 shuffle, 12 steps per bar
+
+The mix goes through a mastering stage: a filter that removes rumble below about 32 Hz, the `eq` tone controls, then a compressor and a limiter. If a mix sounds bass-heavy, look first at which voices are low (bass, timpani, low toms, bodhran, drones) and use `low=` on the ones that double each other; `eq low=` turns the whole mix.
 
 Swing only works when steps is even. 0.1 to 0.15 is a light lilt; 0.33 gives a triplet shuffle.
 
@@ -87,6 +90,7 @@ Voice options:
 - `layer=1` the lowest intensity at which this voice plays, 0 to 9 (default 0, which always plays)
 - `chance=0.7` each note or hit plays only this fraction of the time, rolled again every time it comes round (default 1)
 - `jitter=0.2` plays each note up to this many seconds late, at random, for a loose, unquantized feel (default 0)
+- `low=-4` turns this voice's lows (below about 150 Hz) up or down, in dB, -24 to 12 (default 0). Use it to keep low instruments out of each other's way: a bass and a low drum on the same notes boom together, so thin the drum's lows and keep its attack
 - `human=0.5` how loosely the player plays (default 1). Each note lands a few milliseconds either side of the beat and a little louder or softer, and on winds, bowed strings and voices it is a few cents off. `0` plays exactly as written; `2` is twice as loose. The plain synths (`sine square saw triangle chip`) always play exactly
 - `arp=up` turns every chord this voice plays (`[*]`, `[Dm]`, `C4+E4+G4`) into an arpeggio: `up`, `down`, `updown` or `random`. Single notes play as written. See Random parts.
 - `rate=2` the arpeggio plays one note every this many steps (default 1)

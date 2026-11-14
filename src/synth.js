@@ -558,10 +558,14 @@ const INST = {
     lp.frequency.linearRampToValueAtTime(top, t + .07);
     lp.frequency.setTargetAtTime(f * 2.2 + 150, t + .07, .25);
     const o1 = O(S, 'sawtooth', f, t, end, p); const g1 = G(S, .38); o1.connect(g1).connect(lp);
-    const o2 = O(S, 'sine', f, t, end, p); const g2 = G(S, .75); o2.connect(g2).connect(lp);
+    // musicbox: on the lowest notes a real bass's fundamental is weaker than a pure sine's; move some
+    // of it up an octave, so the note sounds as full without booming (all of it from 40 Hz down)
+    const deep = clamp((75 - f) / 35, 0, 1);
+    const o2 = O(S, 'sine', f, t, end, p); const g2 = G(S, .75 * (1 - .5 * deep)); o2.connect(g2).connect(lp);
+    const o3 = O(S, 'sine', f, t, end, p, 2); const g3 = G(S, .32 * deep); o3.connect(g3).connect(lp);
     // musicbox: a fretless player slides into some notes; a soft thump of the finger on the string
-    scoop([o1, o2], t, Math.random() < .3 ? 35 : 6, .04, p);
-    vibrato(S, t, end, [o1, o2], { rate: 4.5, depth: 6, delay: .3, rise: .4, wander: 2 });
+    scoop([o1, o2, o3], t, Math.random() < .3 ? 35 : 6, .04, p);
+    vibrato(S, t, end, [o1, o2, o3], { rate: 4.5, depth: 6, delay: .3, rise: .4, wander: 2 });
     noise(S, out, t, { type: 'lowpass', f: 700, q: .7, tau: .012, peak: v * .1 });
   } },
   synbass: { loose: 0.3, rev: 0.08, level: 0.76, play(S, out, t, d, f, v, p) {
@@ -802,7 +806,9 @@ const BED = {
     const g = G(S, 0.65);
     lp.connect(g).connect(out);
     const srcs = [];
-    for (const [type, ratio, detune, amp] of [['sawtooth', 1, -7, 0.22], ['sawtooth', 1, 7, 0.22], ['triangle', 2, 3, 0.18], ['sine', 0.5, 0, 0.45]]) {
+    // musicbox: the sine an octave down only when it is above 40 Hz; lower, it is rumble, not pitch
+    const subR = f * 0.5 >= 40 ? 0.5 : 1, subA = f * 0.5 >= 40 ? 0.45 : 0.3;
+    for (const [type, ratio, detune, amp] of [['sawtooth', 1, -7, 0.22], ['sawtooth', 1, 7, 0.22], ['triangle', 2, 3, 0.18], ['sine', subR, 0, subA]]) {
       const o = S.ctx.createOscillator(); o.type = type;
       o.frequency.value = clamp(f * ratio, 1, S.nyq * 0.9); o.detune.value = detune;
       const og = G(S, amp); o.connect(og).connect(lp); o.start(t); srcs.push(o);
@@ -841,7 +847,11 @@ function createSynth(ctx, dest, opts = {}) {
   const nd = S.noise.getChannelData(0); for (let i = 0; i < nlen; i++) nd[i] = Math.random() * 2 - 1;
 
   const master = G(S, 0.72);
-  const lowShelf = F(S, 'lowshelf', 180, .7, 2);
+  // musicbox: mastering. A subsonic filter first: below about 32 Hz there is nothing musical, only
+  // rumble that costs headroom and makes small subwoofers boom. Then the score's tone controls
+  // (eq low= high=); the low shelf was a fixed +2 dB at 180 Hz, which made every mix bass-heavy.
+  const sub1 = F(S, 'highpass', 32, .54), sub2 = F(S, 'highpass', 32, 1.31);
+  const lowShelf = F(S, 'lowshelf', 150, .7, 0);
   const highShelf = F(S, 'highshelf', 7500, .7, -2.5);
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -15; comp.knee.value = 10; comp.ratio.value = 3.2; comp.attack.value = 0.006; comp.release.value = 0.22;
@@ -851,7 +861,7 @@ function createSynth(ctx, dest, opts = {}) {
   if (opts.raw) {
     // measurement chain: rough K-weighting, no compression
     master.connect(F(S, 'highpass', 60, .7)).connect(F(S, 'highshelf', 1500, .7, 4)).connect(out).connect(dest);
-  } else master.connect(lowShelf).connect(highShelf).connect(comp).connect(limiter).connect(out).connect(dest);
+  } else master.connect(sub1).connect(sub2).connect(lowShelf).connect(highShelf).connect(comp).connect(limiter).connect(out).connect(dest);
   const analyser = ctx.createAnalyser(); analyser.fftSize = 1024; out.connect(analyser);
 
   const verb = ctx.createConvolver(); verb.buffer = makeIR(ctx, 2.8, 3.4);
@@ -915,13 +925,18 @@ function createSynth(ctx, dest, opts = {}) {
       const bus = G(S, 1); bus.connect(master);
       const sendBus = G(S, 1); sendBus.connect(verbIn);
       verbRet.gain.setValueAtTime(0.25 + 1.6 * (song.reverb != null ? song.reverb : 0.3), ctx.currentTime);
+      const eq = song.eq || {}; // musicbox: the score's tone controls
+      lowShelf.gain.setTargetAtTime(eq.low || 0, ctx.currentTime, 0.05);
+      highShelf.gain.setTargetAtTime(-2.5 + (eq.high || 0), ctx.currentTime, 0.05);
       const stops = []; // musicbox: cleanups for voice bodies
       const ch = song.voices.map(v => {
         const def = v.drum ? DRUM[v.inst] : INST[v.inst];
         const input = G(S, v.vol * def.level);
         const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-        if (pan) { pan.pan.value = v.pan; input.connect(pan).connect(bus); } else input.connect(bus);
-        const send = G(S, v.rev != null ? v.rev : def.rev); input.connect(send).connect(sendBus);
+        // musicbox: low= turns this voice's lows (below about 150 Hz) up or down, before the reverb
+        const post = v.low ? input.connect(F(S, 'lowshelf', 150, .7, v.low)) : input;
+        if (pan) { pan.pan.value = v.pan; post.connect(pan).connect(bus); } else post.connect(bus);
+        const send = G(S, v.rev != null ? v.rev : def.rev); post.connect(send).connect(sendBus);
         // musicbox: an instrument's body (a violin's resonances, a choir's vowel) is built once per
         // voice, and every note plays into it
         const into = def.body ? def.body(S, input, v, fn => stops.push(fn)) : input;

@@ -144,7 +144,7 @@ function parse(text) {
   const err = (ln, msg) => errors.push({ line: ln, msg });
   const song = {
     title: 'Untitled', composer: '', about: '', tempo: 120, beats: 4, steps: 4, swing: 0,
-    reverb: 0.3, key: null, voices: [], voiceMap: {}, patterns: {}, patternOrder: [],
+    reverb: 0.3, eq: { low: 0, high: 0 }, key: null, voices: [], voiceMap: {}, patterns: {}, patternOrder: [],
     cues: {}, cueOrder: [], transitions: [], beds: [], bedMap: {}
   };
   let cur = null;
@@ -207,6 +207,14 @@ function parse(text) {
       case 'steps': target.steps = Math.round(num(restStr, 1, 12, 4)); break;
       case 'swing': target.swing = num(restStr, 0, 0.75, 0); break;
       case 'reverb': song.reverb = num(restStr, 0, 1, 0.3); break;
+      case 'eq': { // musicbox: tone controls for the whole mix, in dB: eq low=-2 high=1
+        for (const w of words.slice(1)) {
+          const kv = /^(\w+)=(.+)$/.exec(w), k = kv && kv[1].toLowerCase();
+          if (k === 'low' || k === 'high') song.eq[k] = num(kv[2], -12, 12, 0);
+          else err(ln, `eq takes low= and high=, in dB from -12 to 12; got "${w}".`);
+        }
+        break;
+      }
       case 'key': { // musicbox
         const k = parseKey(restStr);
         if (!k) err(ln, `Can't read the key "${restStr}". Write a tonic and a mode, like: key D minor, key F# dorian, key Bb major. Modes: ${Object.keys(MODES).join(' ')}.`);
@@ -314,7 +322,7 @@ function parse(text) {
     const v = {
       name, inst: instL, drum: isDrum, vol: 0.8, pan: 0, rev: null, trans: 0, glide: 0.07,
       gate: 1, center: 62, bright: 1, att: null, rel: null, layer: 0,
-      chance: 1, jitter: 0, arp: null, rate: 1, pool: 'chord', span: 1, human: 1, ln // musicbox
+      chance: 1, jitter: 0, arp: null, rate: 1, pool: 'chord', span: 1, human: 1, low: 0, ln // musicbox
     };
     for (const opt of w.slice(2)) {
       const kv = /^(\w+)=(.+)$/.exec(opt);
@@ -336,6 +344,7 @@ function parse(text) {
         case 'chance': v.chance = num(val, 0, 1, 1); break;
         case 'jitter': v.jitter = num(val, 0, 1, 0); break;
         case 'human': v.human = num(val, 0, 2, 1); break; // musicbox: player looseness, see synth.js
+        case 'low': v.low = num(val, -24, 12, 0); break; // musicbox: this voice's lows, in dB
         // musicbox: arpeggiator for chords ([*], [Dm], C4+E4+G4)
         case 'arp': {
           const a = val.toLowerCase();
@@ -855,7 +864,7 @@ function compile(text) {
   warnings.sort((a, b) => a.line - b.line);
   return {
     title: song.title, composer: song.composer, about: song.about, tempo: song.tempo,
-    beats: song.beats, steps: song.steps, reverb: song.reverb, key: song.key,
+    beats: song.beats, steps: song.steps, reverb: song.reverb, eq: song.eq, key: song.key,
     voices, intro: cues[defaultCue].intro, loop: cues[defaultCue].loop,
     cues, cueOrder: song.cueOrder.slice(), defaultCue, transitions, beds: song.beds,
     patterns: compiled, errors, warnings, patternCount: song.patternOrder.length

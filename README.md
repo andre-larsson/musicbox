@@ -22,6 +22,9 @@ Pushing to `main` runs the tests, builds the site and deploys it to GitHub Pages
 
 The editor plays any score in `scores/`. It has a button for each cue, a slider for intensity, and mute and solo for each voice and bed (voices that can't be heard in the cue or at the intensity playing are dimmed), and it reloads the music when a `.scrim` file is saved. That makes it the listening side of the loop when an agent is writing the score. The status line shows the seed of the current performance.
 
+- **Timeline.** The cue playing, its intro and its loop, pattern by pattern with bar lines and a playhead. Click or drag to jump to a bar; the arrow keys move a bar, Shift and the arrow keys a pattern. Patterns picked at random say what they were picked from. Space pauses and resumes.
+- **Master.** A live spectrum of the mastered output with the mix eq drawn over it, meters for loudness (LUFS) and peaks, and controls for each stage of the chain: gain, a high pass filter (cutoff, slope and resonance), the mix eq's bands, the compressor and the limiter, with how hard each of those two works. Drag a band's point on the spectrum, type its values or move a slider; the music changes as you go, and the editor writes the `eq mix` and `master` lines into the score. Bypass eq plays the mix without the eq, to compare.
+
 Demos in `scores/demo/`: `tide-caves` (cues, layers, a fill and a fanfare), `night-ferry` (every random part, and beds that change between cues) and `brinelight` (a port of the generative pad-and-pluck score from the browser game [Brinelight](https://andre-larsson.github.io/brinelight/)).
 
 ## In a game
@@ -51,11 +54,12 @@ music.on('cue', ({ cue }) => console.log('now playing', cue));
 |---|---|
 | `load(text)` | Compiles a score. Throws an error with `.errors` (line and message) if it doesn't compile. |
 | `unlock()` | Creates and resumes the AudioContext. Call it from a user gesture. |
-| `play(cue?, {intensity, seed}?)` | Starts a cue from its beginning. Without a name, starts the score's first cue. The same `seed` gives the same random choices; without one, every play differs. |
+| `play(cue?, {intensity, seed, part, time}?)` | Starts a cue from its beginning, or `time` seconds into its `part` (`'intro'` or `'loop'`). Without a name, starts the score's first cue. The same `seed` gives the same random choices; without one, every play differs. |
+| `seek(time, part?)` | Jumps to `time` seconds into the intro or loop of the cue playing (by default the part playing). Notes still sounding at that point start on it. |
 | `goto(cue, {at, fade, via, restart}?)` | Switches cue on the next `now`/`beat`/`bar`/`pattern`/`loop` boundary. The defaults come from the score's `switch` lines. Does nothing if that cue is already playing. |
 | `setIntensity(n, {fade, at}?)` | Voices with `layer <= n` play. Fades over `fade` seconds (1 by default). |
 | `mute(name, on)`, `setVolume(v)`, `stop(fade)`, `close()` | What their names say. `mute` takes a voice or a bed. |
-| `state` | The cue, part, pattern, bar, beat and chord that are audible now, plus the target cue, the intensity and the seed. |
+| `state` | The cue, part, pattern, bar, beat and chord that are audible now, plus the target cue, the intensity and the seed. `time`, `length`, `sections` and `pass` place it in the part playing: seconds in, the part's length, its patterns in order, and how many times it has come round. |
 | `on('cue' \| 'pattern' \| 'end', fn)` | Fires when that moment becomes audible, accurate to about 25 ms. Returns a function that unsubscribes. |
 
 To share one AudioContext with your game's sound effects, pass `new MusicPlayer({ context, destination })`.
@@ -95,7 +99,7 @@ What musicbox adds to Scrimshaw:
 - **An arpeggiator.** `arp=up|down|updown|random` with `rate=`, `span=` and `pool=chord|scale` turns `[*]` into an arpeggio that follows the harmony line.
 - **Beds.** `bed sea sea`, `bed hum drone note=D2`: continuous sounds that keep going across cue switches. A cue's `beds` line sets which play and how loud.
 - **Instruments that play like people.** Notes land a few milliseconds off the beat and vary a little in loudness, louder notes are brighter, winds, bowed strings and voices find each note from a little below and drift a few cents, and no two notes have the same vibrato. The violin, flute, clarinet, horn, brass, string section and choir are rebuilt around this (a violin body, breath and bow noise, sections of separate players). `human=` on a voice sets how loose; `human=0` plays exactly as written.
-- **EQ and mastering.** `eq NAME ...` lines give any voice, bed or the whole mix a parametric eq (high-pass, low-pass, shelves, peaks, notches). The mix goes through a filter that removes sub-bass rumble, the mix eq, a compressor and a limiter, with no fixed tone of its own.
+- **EQ and mastering.** `eq NAME ...` lines give any voice, bed or the whole mix a parametric eq (high-pass, low-pass, shelves, peaks, notches). The mix goes through a gain, a high pass filter that removes sub-bass rumble, the mix eq, a compressor and a limiter, with no fixed tone of its own. A `master` line sets the gain, the filter's cutoff, slope and resonance, the compressor and the limiter (`master gain=-4 highpass=60 comp=-18,2.5`).
 - **More checks.** Warnings for parts shorter than their pattern and for patterns nothing plays. Errors in unplayed patterns still show up. Errors point at the line that holds the bad bar. Random note sets are checked against the chord, and the ones that rub are listed.
 
 [docs/PROMPT.md](docs/PROMPT.md) is the full reference. It's written so that you can paste it into any LLM to compose scores.

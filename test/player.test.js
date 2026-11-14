@@ -166,3 +166,54 @@ test('the demo score plays every cue', () => {
   assert.equal(player.target, 'explore');
   assert.ok(new Set(played.map(p => p.session)).size >= 3);
 });
+
+test('play can start part of the way into a cue, picking up notes that are still sounding', () => {
+  const { player, played, runTo } = fakes();
+  player.load(score);
+  player.play('calm', { part: 'loop', time: 2.5 }); // half a second into the G5 of bar 2
+  runTo(1);
+  const lead = played.filter(p => p.voice === 'lead');
+  assert.equal(lead.length, 1);
+  assert.deepEqual(lead[0].ev.m, [79]);
+  assert.ok(Math.abs(lead[0].t - 0.1) < 1e-9, 'the held note starts at once');
+  const full = compile(score).cues.calm.loop.events.find(e => e.m && e.m[0] === 79);
+  assert.ok(Math.abs(lead[0].ev.d - (full.d - 0.5)) < 1e-9, 'with only what is left of it');
+  const kicks = played.filter(p => p.voice === 'drum');
+  // hits at 2.5, 3 and 3.5 s into the loop; the one at 2 s is before the start point
+  assert.deepEqual(kicks.map(p => +p.t.toFixed(6)), [0.1, 0.6, 1.1], 'drum hits before the start point are skipped');
+  const st = player.state;
+  assert.equal(st.part, 'loop');
+  assert.equal(st.bar, 2);
+  assert.ok(Math.abs(st.time - 3.4) < 1e-9);
+  assert.equal(st.length, 4);
+});
+
+test('seek jumps within the part playing and keeps the same pass', () => {
+  const { player, played, runTo } = fakes();
+  player.load(score);
+  player.play('calm');
+  runTo(1);
+  const sections = player.state.sections;
+  player.seek(0.5);
+  assert.equal(player.state.time, 0.5, 'the position moves at once');
+  runTo(1.5);
+  const fresh = played.filter(p => p.session === 2);
+  assert.ok(fresh.length > 0, 'a new run plays from the seek point');
+  assert.ok(Math.abs(fresh[0].t - 1.1) < 1e-9);
+  assert.deepEqual(fresh.filter(p => Math.abs(p.t - 1.1) < 1e-9).map(p => p.voice).sort(), ['drum', 'lead']);
+  assert.equal(player.state.sections, sections, 'the same pass');
+  assert.equal(player.target, 'calm');
+});
+
+test('state counts the passes through a loop', () => {
+  const { player, runTo } = fakes();
+  player.load(score);
+  player.play('calm');
+  runTo(1);
+  assert.equal(player.state.pass, 1);
+  runTo(9);
+  assert.equal(player.state.pass, 3);
+  player.stop();
+  assert.equal(player.state.playing, false);
+  assert.equal(player.state.cue, null);
+});

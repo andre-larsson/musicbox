@@ -111,7 +111,7 @@ Drum instruments, one sound per voice:
 
 A `piano` note rings until its written length ends, like a key held down, so give notes their full length (`:N`) where a pianist would hold them or use the pedal. Some of these names are short. `pipe` is a pipe organ, `pizz` is pizzicato strings, `upright` is an upright bass, and `chip` is a square-wave game console lead. `ohat` is an open hi-hat, `tamb` a tambourine, and `tri` a triangle. `thunder` is a long thunder roll and `surf` is a wave breaking on a beach; both last several seconds.
 
-## EQ
+## EQ and mastering
 
 ```
 eq NAME BAND BAND ...
@@ -119,7 +119,7 @@ eq NAME BAND BAND ...
 
 NAME is a voice, a bed, or `mix` (the whole mix). The bands are the filters a DAW's eq has:
 
-- `highpass=FREQ[,Q]` removes what is below FREQ (Q 0.707 if left out)
+- `highpass=FREQ[,Q]` removes what is below FREQ (Q 0.707 if left out: flat, with no peak; a higher Q makes a peak at FREQ)
 - `lowpass=FREQ[,Q]` removes what is above FREQ
 - `lowshelf=FREQ,GAIN` turns everything below about FREQ up or down by GAIN dB
 - `highshelf=FREQ,GAIN` the same, above FREQ
@@ -134,7 +134,20 @@ eq fiddle  highpass=200       # nothing useful below the violin's lowest string
 eq mix     highshelf=8k,+2    # a little air on the whole mix
 ```
 
-The mix goes through a mastering stage: a filter that removes rumble below about 32 Hz, the `eq mix` bands, then a compressor and a limiter. Fix the sound at the source first: an instrument's own `bright=`, a voice's eq, its `pan=`. Keep `eq mix` for the final polish. When low instruments clash (a bass and a low drum on the same notes boom together), cut the drum with a `peak=` at its pitch rather than a shelf, which would thin the upper bass too. Spread parts in the same range apart with `pan=`, and keep the bass and low drums near the middle.
+The mix goes through a mastering chain: a gain, a high pass filter that removes rumble below 32 Hz, the `eq mix` bands, then a compressor and a limiter. Fix the sound at the source first: an instrument's own `bright=`, a voice's eq, its `pan=`. Keep `eq mix` for the final polish. When low instruments clash (a bass and a low drum on the same notes boom together), cut the drum with a `peak=` at its pitch rather than a shelf, which would thin the upper bass too. Spread parts in the same range apart with `pan=`, and keep the bass and low drums near the middle.
+
+A `master` line changes the rest of the chain. Leave out what you don't change; without the line, the chain is `master gain=0 highpass=32,24,0.707 comp=-15,3.2 limit=-3`.
+
+- `gain=DB` the level into the chain, -24 to +24 (default 0). Lower it to make the music quieter and squeeze it less.
+- `highpass=FREQ[,SLOPE[,Q]]` the high pass filter: the cutoff, 20 to 1000 Hz (default 32); how steeply it cuts below that, 12, 24, 36 or 48 dB per octave (default 24); and its resonance, a Q from 0.5 to 6 (default 0.707, none; higher makes a peak at the cutoff). Or `off`. Raise the cutoff to 60 to 100 Hz for a lighter low end on small speakers.
+- `comp=THRESHOLD,RATIO` the compressor: threshold -60 to 0 dB, ratio 1 to 20 (default -15,3.2), or `off`
+- `limit=THRESHOLD` the limiter's threshold, -24 to 0 dB (default -3), or `off`
+
+```
+master gain=-4 comp=-18,2.5   # quieter, and a gentler compressor for a calm score
+```
+
+The compressor and limiter make up some of the level they take away, so a lower threshold can make the music louder rather than quieter. To make a score quieter, use `gain=`. Change the master last, while listening in the editor, which shows the loudness.
 
 ## Patterns
 

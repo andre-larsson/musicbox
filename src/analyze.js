@@ -2,6 +2,8 @@
 // can see what the music does without hearing it: structure, layers, ranges, and
 // notes that clash with the harmony line or sit outside the key.
 
+import { masterDefaults } from './score.js';
+
 const SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const NEUTRAL = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
@@ -12,6 +14,19 @@ function eqText(bands) {
   const hz = f => f >= 1000 ? `${+(f / 1000).toFixed(2)} kHz` : `${f} Hz`;
   const db = g => `${g > 0 ? '+' : ''}${g} dB`;
   return bands.map(b => [b.type, hz(b.f), /shelf|peak/.test(b.type) ? db(b.gain) : null, /pass|notch|peak/.test(b.type) ? `Q${b.q}` : null].filter(Boolean).join(' ')).join(', ');
+}
+
+// musicbox: the master line, when it differs from the default chain
+function masterText(m) {
+  if (JSON.stringify(m) === JSON.stringify(masterDefaults())) return null;
+  const db = g => `${g > 0 ? '+' : ''}${g} dB`;
+  const hp = m.highpass;
+  return [
+    `gain ${db(m.gain)}`,
+    hp ? `high pass ${hp.f} Hz ${hp.slope} dB/oct${hp.q !== 0.707 ? ` Q${hp.q}` : ''}` : 'high pass off',
+    m.comp ? `compressor ${db(m.comp.threshold)} ${m.comp.ratio}:1` : 'compressor off',
+    m.limit ? `limiter ${db(m.limit.threshold)}` : 'limiter off'
+  ].join(', ');
 }
 
 function table(spell) { return spell === 'flat' ? FLAT : spell === 'sharp' ? SHARP : NEUTRAL; }
@@ -86,6 +101,8 @@ export function analyze(song, { limit = 12 } = {}) {
   const meter = `${song.beats} beats × ${song.steps} steps (${song.beats * song.steps} per bar)`;
   lines.push(`"${song.title}" · ${meter} · ${song.tempo} bpm${song.key ? ' · key ' + song.key.name : ''}`);
   if (song.mixEq && song.mixEq.length) lines.push(`Mix eq: ${eqText(song.mixEq)}`); // musicbox
+  const mt = song.master && masterText(song.master);
+  if (mt) lines.push(`Master: ${mt}`); // musicbox
 
   /* cues */
   lines.push('', 'Cues');

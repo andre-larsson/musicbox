@@ -131,6 +131,58 @@ function velFrom(marks) {
   return Math.min(1.35, v);
 }
 
+// musicbox: the master chain's settings: the level into it, the high pass filter (cutoff in Hz,
+// slope in dB per octave, q its resonance: 0.707 for none), the compressor and the limiter. These
+// defaults are the fixed chain musicbox had before the master line existed.
+function masterDefaults() {
+  return { gain: 0, highpass: { f: 32, slope: 24, q: 0.707 }, comp: { threshold: -15, ratio: 3.2 }, limit: { threshold: -3 } };
+}
+
+// musicbox: one setting of a master line, applied to `m`. Returns an error message or null.
+function parseMasterOpt(w, m) {
+  const usage = 'master takes gain=DB highpass=FREQ,SLOPE,Q comp=THRESHOLD,RATIO limit=THRESHOLD, and off for highpass, comp or limit';
+  const kv = /^(\w+)=(.+)$/.exec(w);
+  if (!kv) return `Can't read "${w}" in the master line. ${usage}, like: master gain=-2 comp=-18,4 limit=-1.`;
+  const key = kv[1].toLowerCase(), val = kv[2], off = val.toLowerCase() === 'off';
+  const n = x => (/^[-+]?(\d+\.?\d*|\.\d+)(db)?$/i.test(x || '') ? parseFloat(x) : NaN);
+  switch (key) {
+    case 'gain': {
+      const g = n(val);
+      if (!isFinite(g) || g < -24 || g > 24) return `${w}: gain is in dB, from -24 to +24.`;
+      m.gain = g; return null;
+    }
+    case 'highpass': {
+      if (off) { m.highpass = null; return null; }
+      const parts = val.split(',');
+      if (parts.length > 3) return `${w} has too many values. Write highpass=FREQ,SLOPE,Q, like highpass=40,24,0.707.`;
+      const fm = /^(\d+(?:\.\d+)?)(k)?(?:hz)?$/i.exec(parts[0]);
+      const f = fm ? parseFloat(fm[1]) * (fm[2] ? 1000 : 1) : NaN;
+      if (!(f >= 20 && f <= 1000)) return `${w}: the high pass filter's cutoff is in Hz, from 20 to 1000, or off.`;
+      const slope = parts[1] == null || parts[1] === '' ? 24 : n(parts[1]);
+      if (![12, 24, 36, 48].includes(slope)) return `${w}: the slope is 12, 24, 36 or 48 (dB per octave).`;
+      const q = parts[2] == null || parts[2] === '' ? 0.707 : n(parts[2]);
+      if (!(q >= 0.5 && q <= 6)) return `${w}: Q, the resonance, is from 0.5 to 6. 0.707 has none.`;
+      m.highpass = { f, slope, q }; return null;
+    }
+    case 'comp': {
+      if (off) { m.comp = null; return null; }
+      const parts = val.split(',');
+      if (parts.length > 2) return `${w} has too many values. Write comp=THRESHOLD,RATIO, like comp=-18,4.`;
+      const th = n(parts[0]), ra = parts[1] == null ? 3.2 : n(parts[1]);
+      if (!isFinite(th) || th < -60 || th > 0) return `${w}: the compressor's threshold is in dB, from -60 to 0.`;
+      if (!isFinite(ra) || ra < 1 || ra > 20) return `${w}: the compressor's ratio is from 1 to 20.`;
+      m.comp = { threshold: th, ratio: ra }; return null;
+    }
+    case 'limit': {
+      if (off) { m.limit = null; return null; }
+      const th = n(val);
+      if (!isFinite(th) || th < -24 || th > 0) return `${w}: the limiter's threshold is in dB, from -24 to 0.`;
+      m.limit = { threshold: th }; return null;
+    }
+  }
+  return `Unknown master setting "${kv[1]}". ${usage}.`;
+}
+
 function num(s, lo, hi, def) {
   const n = parseFloat(s);
   if (!isFinite(n)) return def;
@@ -144,7 +196,7 @@ function parse(text) {
   const err = (ln, msg) => errors.push({ line: ln, msg });
   const song = {
     title: 'Untitled', composer: '', about: '', tempo: 120, beats: 4, steps: 4, swing: 0,
-    reverb: 0.3, mixEq: [], eqLines: [], key: null, voices: [], voiceMap: {}, patterns: {}, patternOrder: [],
+    reverb: 0.3, mixEq: [], eqLines: [], master: masterDefaults(), key: null, voices: [], voiceMap: {}, patterns: {}, patternOrder: [],
     cues: {}, cueOrder: [], transitions: [], beds: [], bedMap: {}
   };
   let cur = null;
@@ -214,6 +266,11 @@ function parse(text) {
         for (const w of words.slice(2)) { const b = parseEqBand(w); if (typeof b === 'string') err(ln, b); else bands.push(b); }
         if (!words.slice(2).length) err(ln, `eq ${name} has no bands. Example: eq ${name} highshelf=8k,+2`);
         song.eqLines.push({ name, bands, ln });
+        break;
+      }
+      case 'master': { // musicbox: master gain=DB highpass=FREQ,SLOPE,Q|off comp=THRESHOLD,RATIO|off limit=THRESHOLD|off
+        if (words.length < 2) { err(ln, 'master has no settings. Example: master gain=-2 comp=-18,4 limit=-1'); break; }
+        for (const w of words.slice(1)) { const e = parseMasterOpt(w, song.master); if (e) err(ln, e); }
         break;
       }
       case 'key': { // musicbox
@@ -899,7 +956,7 @@ function compile(text) {
   warnings.sort((a, b) => a.line - b.line);
   return {
     title: song.title, composer: song.composer, about: song.about, tempo: song.tempo,
-    beats: song.beats, steps: song.steps, reverb: song.reverb, mixEq: song.mixEq, key: song.key,
+    beats: song.beats, steps: song.steps, reverb: song.reverb, mixEq: song.mixEq, master: song.master, key: song.key,
     voices, intro: cues[defaultCue].intro, loop: cues[defaultCue].loop,
     cues, cueOrder: song.cueOrder.slice(), defaultCue, transitions, beds: song.beds,
     patterns: compiled, errors, warnings, patternCount: song.patternOrder.length
@@ -907,6 +964,6 @@ function compile(text) {
 }
 
 export {
-  parse, compile, noteToMidi, chordToMidis, chordInfo, parseKey, transposeChord, assemble, scaleNotes,
+  parse, compile, masterDefaults, noteToMidi, chordToMidis, chordInfo, parseKey, transposeChord, assemble, scaleNotes,
   MELODIC, DRUMS, BEDS, ARPS, CHORDS, MODES
 };

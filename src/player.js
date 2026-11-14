@@ -6,6 +6,7 @@
 //   music.goto('combat');                  // switches on the next bar (or as the score's switch line says)
 //   music.setIntensity(2);                 // fades layers in and out, keeping everything in sync
 //   music.on('cue', ({ cue }) => ...);     // fires when a cue becomes audible
+//   music.seek(12, 'loop');                // jump 12 s into the loop of the cue playing
 //
 // Scheduling: notes are queued on the AudioContext a short lookahead in advance. A cue
 // switch happens on a musical boundary after everything already queued, so nothing has to
@@ -104,7 +105,10 @@ export class MusicPlayer {
     return this.ctx.state === 'running' ? Promise.resolve() : this.ctx.resume();
   }
 
-  /** Start a cue from its beginning, cutting whatever is playing. */
+  /**
+   * Start a cue from its beginning, cutting whatever is playing. `part` ('intro' or 'loop') and
+   * `time` (seconds into that part) start it further in.
+   */
   play(cue, opts = {}) {
     if (!this.song) throw new Error('Load a score before playing it.');
     const name = cue || this.song.defaultCue;
@@ -115,13 +119,28 @@ export class MusicPlayer {
     this.seed = opts.seed != null ? opts.seed : this.opts.seed != null ? this.opts.seed : randomSeed();
     this.rng = createRng(this.seed);
     if (this.seg) this.halt(0.08);
-    const item = this.cueStart(this.newRun(), name);
+    const run = this.newRun();
+    const item = (opts.part && this.cuePart(run, name, opts.part)) || this.cueStart(run, name);
     if (!item) return;
-    this.target = name;
-    this.until = this.ctx.currentTime;
-    this.begin(item, this.ctx.currentTime + 0.1, null);
-    if (this.opts.autoTick && !this.timer) this.timer = setInterval(() => this.tick(), this.opts.interval);
-    this.tick();
+    this.start(item, opts.part === item.kind ? opts.time : 0);
+  }
+
+  /**
+   * Jump to `time` seconds into the cue that is audible: into its intro or its loop (`part`,
+   * default the part playing). What is queued is cut, and notes that would still be sounding at
+   * that point start on it. Within the part playing, the random pattern picks stay as they are,
+   * so the music is the same pass; another part is rolled afresh. Does nothing when stopped.
+   */
+  seek(time, part) {
+    const seg = this.audible() || this.seg;
+    if (!seg || !this.song) return;
+    const name = this.song.cues[seg.cue] ? seg.cue : this.song.defaultCue;
+    const kind = part || (seg.kind === 'via' ? 'loop' : seg.kind);
+    const same = seg.kind === kind && seg.cue === name && seg.run.song === this.song;
+    this.halt(0.08);
+    const run = this.newRun();
+    const item = same ? { kind, cue: name, tl: seg.tl, run } : (this.cuePart(run, name, kind) || this.cueStart(run, name));
+    if (item) this.start(item, item.kind === kind ? time : 0);
   }
 
   /**
@@ -195,28 +214,33 @@ export class MusicPlayer {
     return () => this.listeners[type].delete(fn);
   }
 
-  /** What is audible right now. */
+  /**
+   * What is audible right now. Besides the cue, pattern, bar, beat and chord: `time`, seconds
+   * into the part playing (the intro, the loop or a transition), `length`, that pass's length,
+   * `sections`, its patterns in order (name, start, dur, bars, barDur), and `pass`, how many
+   * times the part has come round (1 the first time).
+   */
   get state() {
-    const base = { playing: !!this.seg, cue: null, target: this.target, part: null, pattern: null, bar: 0, beat: 0, chord: null, intensity: this.intensity, seed: this.seed };
-    if (!this.ctx || !this.seg) return base;
-    const now = this.ctx.currentTime;
-    for (const seg of [this.seg, ...this.history.slice().reverse()]) {
-      const end = Math.min(seg.t0 + seg.tl.dur, seg.cut);
-      if (now < seg.t0 || now >= end) continue;
-      const rel = now - seg.t0;
-      const secs = seg.tl.sections;
-      const sec = secs.find(s => rel >= s.start && rel < s.start + s.dur) || secs[secs.length - 1];
-      if (!sec) break;
-      const inSec = rel - sec.start;
-      const h = (sec.harmony || []).find(x => inSec >= x.t && inSec < x.t + x.d);
-      return Object.assign(base, {
-        cue: seg.cue, part: seg.kind, pattern: sec.name,
-        bar: Math.min(sec.bars, Math.floor(inSec / sec.barDur) + 1),
-        beat: Math.floor((inSec % sec.barDur) / (sec.barDur / sec.beats)) + 1,
-        chord: h ? h.sym : null
-      });
-    }
-    return base;
+    const base = {
+      playing: !!this.seg, cue: null, target: this.target, part: null, pattern: null, bar: 0, beat: 0, chord: null,
+      intensity: this.intensity, seed: this.seed, time: 0, length: 0, sections: null, pass: 0
+    };
+    const seg = this.audible();
+    if (!seg) return base;
+    // a seek starts its segment in the past; until the music is heard, it sits at the seek point
+    const rel = Math.max(this.ctx.currentTime, seg.from) - seg.t0;
+    const secs = seg.tl.sections;
+    const sec = secs.find(s => rel >= s.start && rel < s.start + s.dur) || secs[secs.length - 1];
+    if (!sec) return base;
+    const inSec = rel - sec.start;
+    const h = (sec.harmony || []).find(x => inSec >= x.t && inSec < x.t + x.d);
+    return Object.assign(base, {
+      cue: seg.cue, part: seg.kind, pattern: sec.name,
+      bar: Math.min(sec.bars, Math.floor(inSec / sec.barDur) + 1),
+      beat: Math.floor((inSec % sec.barDur) / (sec.barDur / sec.beats)) + 1,
+      chord: h ? h.sym : null,
+      time: rel, length: seg.tl.dur, sections: secs, pass: seg.n
+    });
   }
 
   /* --------------------------------------------------------------- internals */
@@ -253,6 +277,33 @@ export class MusicPlayer {
   }
 
   newRun() { return { id: ++this.runCount, song: this.song, sess: null }; }
+
+  // One pass through a cue's intro or loop, or null if the cue has none.
+  cuePart(run, name, kind) {
+    const c = run.song.cues[name];
+    if (!c || (kind !== 'intro' && kind !== 'loop') || !c[kind].dur) return null;
+    return { kind, cue: name, tl: pass(c, kind, this.rng), run };
+  }
+
+  // Start `item` on its own, `time` seconds in, just after now.
+  start(item, time = 0) {
+    this.target = item.cue;
+    this.until = this.ctx.currentTime;
+    const offset = Math.min(Math.max(0, +time || 0), Math.max(0, item.tl.dur - 1e-3));
+    this.begin(item, this.ctx.currentTime + 0.1, null, offset);
+    if (this.opts.autoTick && !this.timer) this.timer = setInterval(() => this.tick(), this.opts.interval);
+    this.tick();
+  }
+
+  // The segment that is audible now, if any.
+  audible() {
+    if (!this.ctx || !this.seg) return null;
+    const now = this.ctx.currentTime;
+    for (const seg of [this.seg, ...this.history.slice().reverse()]) {
+      if (now >= seg.t0 && now < Math.min(seg.t0 + seg.tl.dur, seg.cut)) return seg;
+    }
+    return null;
+  }
 
   cueStart(run, name, depth = 0) {
     const c = run.song.cues[name];
@@ -328,18 +379,39 @@ export class MusicPlayer {
     this.begin(item, end, seg);
   }
 
-  begin(item, t0, prev) {
+  // Start segment `item` at AudioContext time t0, `offset` seconds into it.
+  begin(item, t0, prev, offset = 0) {
     const run = item.run;
     if (!run.sess) this.openRun(run);
-    const seg = { kind: item.kind, cue: item.cue, tl: item.tl, run, t0, i: 0, cut: Infinity, next: item.after || null, fadeOut: 0 };
+    const n = prev && prev.run === run && prev.cue === item.cue && prev.kind === item.kind ? prev.n + 1 : 1;
+    const seg = { kind: item.kind, cue: item.cue, tl: item.tl, run, t0: t0 - offset, from: t0, i: 0, cut: Infinity, next: item.after || null, fadeOut: 0, n };
     this.seg = seg;
     if (seg.kind !== 'via' && (!prev || prev.run !== run || prev.cue !== seg.cue || prev.kind === 'via')) this.notify(t0, 'cue', { cue: seg.cue }, seg);
     if (!prev || prev.cue !== seg.cue || prev.run !== run) this.syncBeds(run.song, seg.cue, t0, Math.max(this.opts.bedFade / 2, prev ? prev.fadeOut : this.opts.bedFade));
-    for (const s of seg.tl.sections) this.notify(t0 + s.start, 'pattern', { cue: seg.cue, part: seg.kind, pattern: s.name, bars: s.bars }, seg);
+    for (const s of seg.tl.sections) {
+      if (s.start + s.dur <= offset + 1e-6) continue;
+      this.notify(Math.max(t0, seg.t0 + s.start), 'pattern', { cue: seg.cue, part: seg.kind, pattern: s.name, bars: s.bars }, seg);
+    }
+    if (offset > 0) this.pickUp(seg, offset, t0);
     if (prev && prev.run !== run) {
       this.fadeOut(prev.run, t0, prev.fadeOut);
       this.disposeLater(prev.run, t0 + prev.fadeOut * 2 + 1);
     }
+  }
+
+  // Skip the notes before `offset`; the ones still sounding there start at t0 with what is left of them.
+  pickUp(seg, offset, t0) {
+    const evs = seg.tl.events;
+    let i = 0;
+    for (; i < evs.length && evs[i].t < offset - 1e-6; i++) {
+      const ev = evs[i], v = seg.run.song.voices[ev.v];
+      if (v.drum || ev.t + ev.d < offset + 0.05) continue;
+      const rest = Object.assign({}, ev, { t: offset, d: ev.t + ev.d - offset });
+      delete rest.g; // a slide happened at the note's start
+      const r = realize(rest, v, this.rng);
+      if (r) seg.run.sess.play(r.ev, t0 + r.dt);
+    }
+    seg.i = i;
   }
 
   openRun(run) {
@@ -365,6 +437,7 @@ export class MusicPlayer {
     for (const run of this.runs) if (run.sess) run.sess.stop(Math.max(0.005, fade / 3));
     this.runs.clear();
     this.seg = null;
+    this.history = []; // what was playing is fading out; it no longer counts as audible
     this.target = null;
     this.notices = [];
   }

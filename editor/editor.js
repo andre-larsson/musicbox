@@ -2,19 +2,32 @@ import { MusicPlayer } from '../src/player.js';
 import { compile } from '../src/score.js';
 import { analyze } from '../src/analyze.js';
 import { scoreLink, scoreCode, decodeScore } from '../src/link.js';
+import { createTimeline, formatTime } from './timeline.js';
+import { createMaster } from './master.js';
+import { createDynamics } from './dynamics.js';
+import { setMixLine, setMasterLine, formatMaster, withoutMasteringLines } from './mastertext.js';
 
 const $ = s => document.querySelector(s);
 const ui = {
-  file: $('#file'), play: $('#play'), stop: $('#stop'), cues: $('#cues'), intensity: $('#intensity'),
+  file: $('#file'), play: $('#play'), playPath: $('#playPath'), playLabel: $('#playLabel'), stop: $('#stop'),
+  prev: $('#prev'), next: $('#next'), cues: $('#cues'), intensity: $('#intensity'),
   intensityVal: $('#intensityVal'), volume: $('#volume'), status: $('#status'), score: $('#score'),
   problems: $('#problems'), analysis: $('#analysis'), note: $('#note'), hint: $('#hint'), share: $('#share'),
-  mixer: $('#mixer')
+  mixer: $('#mixer'), track: $('#track'), tNow: $('#tNow'), tEnd: $('#tEnd'),
+  chain: { gain: $('#cGain'), highpass: $('#cHighpass'), eq: $('#cEq'), comp: $('#cComp'), limit: $('#cLimit') },
+  masterLine: $('#masterLine'), masterReset: $('#masterReset')
 };
 
 const player = new MusicPlayer({ volume: +ui.volume.value });
 let song = null;         // last compiled score (may have errors)
 let playable = null;     // last compiled score without errors
+let appliedText = null;  // the text `playable` was compiled from
 let current = null;      // path of the file being edited
+let viewCue = null;      // the cue the timeline shows while stopped
+let heard = {};          // "cue:part" -> sections of the last pass heard, random picks and all
+
+const ICON = { play: 'M4 2.5v11l9.5-5.5z', pause: 'M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z' };
+const paused = () => !!(player.ctx && player.ctx.state === 'suspended' && player.state.playing);
 
 function show(s) {
   ui.problems.innerHTML = '';
@@ -51,6 +64,7 @@ function renderCues() {
     b.dataset.cue = name;
     b.title = player.seg ? `Switch to ${name}` : `Play ${name}`;
     b.onclick = async () => {
+      viewCue = name;
       await player.unlock();
       if (player.song !== playable) player.load(playable);
       if (player.seg) player.goto(name); else player.play(name, { intensity: +ui.intensity.value });
@@ -145,6 +159,13 @@ function apply(reason) {
   show(song);
   if (song.errors.length) { ui.note.textContent = `${reason ? reason + ' · ' : ''}not applied: fix the errors first`; return; }
   playable = song;
+  appliedText = ui.score.value;
+  heard = {};
+  if (!viewCue || !playable.cues[viewCue]) viewCue = playable.defaultCue;
+  master.setBands(playable.mixEq);
+  dyn.set(playable.master);
+  master.setHighpass(playable.master.highpass);
+  renderChain();
   renderCues();
   if (player.seg) {
     const cue = playable.cues[player.target] ? player.target : playable.defaultCue;
@@ -158,6 +179,7 @@ async function openFile(path, reason) {
   const res = await fetch('../' + path, { cache: 'no-store' });
   if (!res.ok) { ui.note.textContent = `Can't load ${path} (${res.status})`; return; }
   current = path;
+  viewCue = null;
   ui.score.value = await res.text();
   ui.file.value = path;
   const url = new URL(location.href);
@@ -187,6 +209,7 @@ async function openLink(code) {
   let text;
   try { text = await decodeScore(code); } catch { ui.note.textContent = "Can't read the score in this link. It may have been cut short when it was copied."; return false; }
   current = null;
+  viewCue = null;
   let o = ui.file.querySelector('option[data-link]');
   if (!o) { o = document.createElement('option'); o.dataset.link = '1'; o.disabled = true; o.textContent = '(score from a link)'; ui.file.prepend(o); }
   o.selected = true;
@@ -222,13 +245,193 @@ async function init() {
 }
 
 ui.file.onchange = () => openFile(ui.file.value);
-ui.play.onclick = async () => {
+
+/* ------------------------------------------------------------ transport and timeline */
+
+// Pause holds the whole audio clock still, so the music (beds too) carries on exactly where it was.
+async function togglePlay() {
   if (!playable) return;
+  if (paused()) { await player.ctx.resume(); return; }
+  if (player.state.playing) { await player.ctx.suspend(); return; }
   await player.unlock();
   player.load(playable);
-  player.play(player.target && playable.cues[player.target] ? player.target : playable.defaultCue, { intensity: +ui.intensity.value });
+  player.play(playable.cues[viewCue] ? viewCue : playable.defaultCue, { intensity: +ui.intensity.value });
+}
+ui.play.onclick = togglePlay;
+ui.stop.onclick = async () => {
+  if (paused()) await player.ctx.resume();
+  player.stop(0.4);
 };
-ui.stop.onclick = () => player.stop(0.4);
+
+// Move to `time` seconds into the intro or loop of the cue on the timeline. While paused it stays paused.
+async function seek(part, time) {
+  if (!playable) return;
+  if (player.state.playing && player.song === playable) { player.seek(time, part); return; }
+  await player.unlock();
+  player.load(playable);
+  player.play(playable.cues[viewCue] ? viewCue : playable.defaultCue, { part, time, intensity: +ui.intensity.value });
+}
+const timeline = createTimeline(ui.track, { onSeek: seek });
+ui.prev.onclick = () => timeline.step(-1, 'pattern');
+ui.next.onclick = () => timeline.step(1, 'pattern');
+
+addEventListener('keydown', e => {
+  if (e.key !== ' ' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if (e.target.closest && e.target.closest('textarea, input, select, button, a, [contenteditable]')) return;
+  e.preventDefault();
+  togglePlay();
+});
+
+// Which patterns a randomly picked section could have been: `loop A {B C}` gives B its choices.
+const choiceCache = new WeakMap();
+function choicesFor(sections, slots) {
+  if (!slots || !sections) return null;
+  if (choiceCache.has(sections)) return choiceCache.get(sections);
+  const name = s => s.name + (s.trans ? (s.trans > 0 ? '+' : '') + s.trans : '');
+  const label = tl => { const ns = tl.sections.map(name); return ns.every(x => x === ns[0]) && ns.length > 1 ? `${ns[0]}×${ns.length}` : ns.join(' '); };
+  const out = [];
+  let i = 0;
+  for (const slot of slots) {
+    let k = slot.findIndex(tl => tl.sections.every((s, j) => sections[i + j] && sections[i + j].name === s.name && sections[i + j].trans === s.trans));
+    if (k < 0) k = 0;
+    const opts = slot.length > 1 ? [...new Set(slot.map(label))] : null;
+    for (let j = 0; j < slot[k].sections.length; j++) out.push(opts);
+    i += slot[k].sections.length;
+  }
+  choiceCache.set(sections, out);
+  return out;
+}
+
+// What the timeline shows: the cue playing (or the one picked while stopped), its intro and its
+// loop as they are being heard, and where the music is in them.
+function timelineView(st) {
+  if (!playable) return { parts: [], pos: null };
+  if (st.cue && st.sections && st.part !== 'via') heard[st.cue + ':' + st.part] = st.sections;
+  let cue = st.playing ? (st.cue || st.target) : viewCue;
+  if (!cue || !playable.cues[cue]) cue = playable.defaultCue;
+  if (st.playing) viewCue = cue;
+  const c = playable.cues[cue];
+  const parts = [];
+  for (const kind of ['intro', 'loop']) {
+    if (!c[kind].dur) continue;
+    const sections = (st.cue === cue && st.part === kind && st.sections) || heard[cue + ':' + kind] || c[kind].sections;
+    const last = sections[sections.length - 1];
+    parts.push({ kind, sections, dur: last ? last.start + last.dur : 0, choices: choicesFor(sections, kind === 'intro' ? c.introSlots : c.loopSlots) });
+  }
+  let pos = null;
+  if (st.cue === cue && (st.part === 'intro' || st.part === 'loop')) {
+    pos = st.time + (st.part === 'loop' && parts[0] && parts[0].kind === 'intro' ? parts[0].dur : 0);
+  }
+  const label = st.playing && st.cue ? `${cue}, ${st.part === 'via' ? 'transition' : st.part}, pattern ${st.pattern}, bar ${st.bar}, ${formatTime(pos || 0)}` : `${cue}, stopped`;
+  return { cue, parts, then: !c.loop.dur && c.then ? c.then : null, pos, label };
+}
+
+/* ------------------------------------------------------------ master */
+
+// The master panel edits the score's `eq mix` and `master` lines. While a band or a slider moves,
+// only the sound changes; when the change is done, the line is written into the score. If the
+// score has no other edits waiting, that counts as applied; otherwise the music keeps the old score
+// with the new mastering until Ctrl+Enter.
+const master = createMaster({
+  canvas: $('#scope'), list: $('#bands'), add: $('#addBand'), bypass: $('#bypass'), line: $('#eqLine'), note: $('#scopeNote'),
+  meters: {
+    loud: meterEls('#mLoud'), peak: [meterEls('#mPeakL'), meterEls('#mPeakR')], comp: meterEls('#mComp'), lim: meterEls('#mLim')
+  }
+}, {
+  onChange(bands, commit) {
+    if (player.syn) player.syn.setMixEq(bands);
+    renderChain(bands);
+    if (commit) writeMastering({ mixEq: bands });
+  },
+  onBypass(on) {
+    if (player.syn) player.syn.bypassMixEq(on);
+    ui.note.textContent = on ? 'Bypassing the mix eq: you hear the mix without it' : '';
+  }
+});
+function meterEls(sel) { const m = $(sel); return { bar: m.querySelector('.mbar'), out: m.querySelector('output'), sub: m.querySelector('.sub') }; }
+
+const dyn = createDynamics($('#dynamics'), {
+  onChange(m, commit) {
+    if (player.syn) player.syn.setMaster(m);
+    master.setHighpass(m.highpass);
+    renderChain(null, m);
+    if (commit) writeMastering({ master: m });
+  }
+});
+ui.masterReset.onclick = () => dyn.reset();
+
+// The chain at the top of the panel: each stage's settings at a glance, and a way to its controls.
+let chainBands = [];
+function renderChain(bands, m) {
+  if (bands) chainBands = bands;
+  m = m || dyn.value;
+  const minus = s => String(s).replace('-', '−');
+  const set = (k, text, off) => { ui.chain[k].textContent = text; ui.chain[k].parentElement.classList.toggle('off', !!off); };
+  set('gain', minus(`${m.gain > 0 ? '+' : ''}${m.gain} dB`));
+  const hp = m.highpass;
+  set('highpass', hp ? `${hp.f} Hz` + (hp.slope !== 24 ? ` · ${hp.slope} dB` : '') + (hp.q !== 0.707 ? ` · Q ${hp.q}` : '') : 'off', !hp);
+  set('eq', chainBands.length ? `${chainBands.length} band${chainBands.length > 1 ? 's' : ''}` : 'neutral');
+  set('comp', m.comp ? minus(`${m.comp.threshold} dB · ${m.comp.ratio}:1`) : 'off', !m.comp);
+  set('limit', m.limit ? minus(`${m.limit.threshold} dB`) : 'off', !m.limit);
+  ui.masterLine.textContent = formatMaster(m) || 'No master line: the default chain.';
+}
+for (const b of document.querySelectorAll('.chain button')) {
+  b.onclick = () => {
+    const stage = { gain: 'stGain', highpass: 'stHighpass', eq: 'stEq', comp: 'stComp', limit: 'stLimit' }[b.dataset.stage];
+    const el = $('#' + stage);
+    el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    if (b.dataset.stage === 'eq') ($('#bands input') || $('#addBand')).focus({ preventScroll: true });
+    else dyn.focus(b.dataset.stage);
+  };
+}
+
+// Write a mastering change ({ mixEq } or { master }) into the score.
+function writeMastering(change) {
+  const before = ui.score.value;
+  const { text, line } = change.mixEq ? setMixLine(before, change.mixEq) : setMasterLine(before, change.master);
+  if (text === before) return;
+  const what = change.mixEq ? 'Mix eq' : 'Master';
+  const onlyMastering = appliedText != null && withoutMasteringLines(before) === withoutMasteringLines(appliedText);
+  replaceScore(text);
+  if (onlyMastering) {
+    const s = compile(text);
+    if (!s.errors.length) {
+      song = s; playable = s; appliedText = text;
+      show(s);
+      if (player.song) player.load(playable);
+      ui.note.textContent = line ? `${what} written to line ${line}` : `${what} line removed: the default`;
+      return;
+    }
+  }
+  if (playable) {
+    playable = Object.assign({}, playable, change);
+    if (player.song) player.load(playable);
+  }
+  ui.note.textContent = `${what} written${line ? ` to line ${line}` : ''}. Your other edits aren't applied yet: Ctrl+Enter applies them`;
+}
+
+// Change the score text with as small an edit as possible, through the browser's own editing, so
+// Ctrl+Z in the score undoes it. The caret and scroll position stay where they were. On a touch
+// screen, focusing the score would bring up the keyboard, so the text is set directly there.
+function replaceScore(next) {
+  const ta = ui.score, prev = ta.value;
+  if (matchMedia('(pointer: coarse)').matches && document.activeElement !== ta) { ta.value = next; return; }
+  let a = 0;
+  while (a < prev.length && a < next.length && prev[a] === next[a]) a++;
+  let b = 0;
+  while (b < prev.length - a && b < next.length - a && prev[prev.length - 1 - b] === next[next.length - 1 - b]) b++;
+  const focus = document.activeElement, ss = ta.selectionStart, se = ta.selectionEnd, top = ta.scrollTop;
+  ta.focus({ preventScroll: true });
+  ta.setSelectionRange(a, prev.length - b);
+  let ok = false;
+  try { ok = document.execCommand('insertText', false, next.slice(a, next.length - b)); } catch { ok = false; }
+  if (!ok || ta.value !== next) ta.value = next;
+  const shift = next.length - prev.length, fix = p => (p <= a ? p : Math.max(a, p + shift));
+  ta.setSelectionRange(fix(ss), fix(se));
+  ta.scrollTop = top;
+  if (focus && focus !== ta && focus.focus) focus.focus({ preventScroll: true }); else if (focus !== ta) ta.blur();
+}
 ui.share.onclick = async () => {
   const url = await scoreLink(ui.score.value, location.origin + location.pathname);
   history.replaceState(null, '', url);
@@ -244,15 +447,40 @@ ui.score.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); apply('Applied edits'); }
 });
 
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+let lastStatus = '', lastPlayState = '';
+
 function tick() {
-  const st = player.state;
-  if (!st.playing) ui.status.textContent = 'stopped';
-  else if (!st.cue) ui.status.textContent = `starting ${st.target || ''}…`;
-  else {
-    const part = st.part === 'via' ? 'transition' : st.part;
-    ui.status.innerHTML = `<b>${st.cue}</b> ${part} · ${st.pattern} · bar ${st.bar}.${st.beat}${st.chord ? ' · ' + st.chord : ''}` +
-      (st.target && st.target !== st.cue ? ` → ${st.target}` : '') + ` · seed ${st.seed}`;
+  const st = player.state, hold = paused();
+  const mode = !st.playing ? 'stopped' : hold ? 'paused' : 'playing';
+
+  if (mode !== lastPlayState) {
+    lastPlayState = mode;
+    ui.playPath.setAttribute('d', mode === 'playing' ? ICON.pause : ICON.play);
+    ui.playLabel.textContent = mode === 'playing' ? 'Pause' : mode === 'paused' ? 'Resume' : 'Play';
+    ui.play.title = (mode === 'playing' ? 'Pause' : mode === 'paused' ? 'Resume' : 'Play') + ' (Space)';
   }
+  ui.play.disabled = !playable;
+
+  const view = timelineView(st);
+  timeline.update(view);
+  ui.tNow.textContent = formatTime(view.pos || 0);
+  ui.tEnd.textContent = formatTime(timeline.total);
+
+  let status;
+  if (!st.playing) status = playable ? `<b>${esc(view.cue)}</b> · stopped · click the timeline to start anywhere` : 'stopped';
+  else if (!st.cue) status = `starting ${esc(st.target || '')}…`;
+  else {
+    const part = st.part === 'via' ? `transition (${esc(st.pattern)})` : st.part + (st.part === 'loop' && st.pass > 1 ? ` ×${st.pass}` : '');
+    status = (hold ? 'paused · ' : '') + `<b>${esc(st.cue)}</b> · ${part}` +
+      (st.part === 'via' ? '' : ` · pattern ${esc(st.pattern)} · bar ${st.bar}.${st.beat}`) + (st.chord ? ' · ' + esc(st.chord) : '') +
+      (st.target && st.target !== st.cue ? ` → ${esc(st.target)}` : '') + ` · seed ${st.seed}`;
+  }
+  if (status !== lastStatus) { ui.status.innerHTML = status; lastStatus = status; }
+
+  if (player.syn && !master.attached) master.attach(player.syn, player.ctx);
+  master.frame(mode);
+
   for (const b of ui.cues.querySelectorAll('button')) {
     b.classList.toggle('on', st.playing && b.dataset.cue === (st.cue || st.target));
     b.title = st.playing ? `Switch to ${b.dataset.cue}` : `Play ${b.dataset.cue}`;

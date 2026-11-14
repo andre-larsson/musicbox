@@ -6,6 +6,7 @@
 // Modified: converted to an ES module; musicbox extensions are marked "musicbox:".
 
 import { createRng, realize, pass } from './random.js'; // musicbox
+import { masterDefaults } from './score.js'; // musicbox
 
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
@@ -830,9 +831,23 @@ const BED = {
 // musicbox: parametric eq. A band is { type, f, gain, q }: highpass, lowpass, lowshelf, highshelf,
 // peak or notch, the filters a DAW's eq uses. Returns the first and last filter, or null.
 const EQ_TYPE = { highpass: 'highpass', lowpass: 'lowpass', lowshelf: 'lowshelf', highshelf: 'highshelf', peak: 'peaking', notch: 'notch' };
+// musicbox: Web Audio reads a high-pass or low-pass filter's Q in dB (the height of its peak),
+// where a score, like a DAW, gives the usual Q: 0.707 is flat (Butterworth), higher makes a peak at
+// the cutoff. Peaking and notch filters take the usual Q in both; shelves ignore it.
+function biquadQ(type, q) { return type === 'highpass' || type === 'lowpass' ? 20 * Math.log10(Math.max(1e-4, q)) : q; }
+// musicbox: the master's high pass filter as Butterworth sections of 12 dB per octave each, flat
+// up to the cutoff. The resonance (q, 0.707 for none) goes on the last, sharpest section, so it
+// lifts the cutoff by the same amount at every slope. Returns [{ f, q }] with the usual Q.
+function highpassStages(hp) {
+  if (!hp) return [];
+  const n = Math.max(1, Math.min(4, Math.round(hp.slope / 12))), order = 2 * n;
+  const qs = [];
+  for (let k = 1; k <= n; k++) qs.push(1 / (2 * Math.cos(Math.PI * (2 * k - 1) / (2 * order))));
+  return qs.map((q, i) => ({ f: hp.f, q: i === n - 1 ? q * (hp.q != null ? hp.q : Math.SQRT1_2) / Math.SQRT1_2 : q }));
+}
 function eqChain(S, bands) {
   if (!bands || !bands.length) return null;
-  const fs = bands.map(b => F(S, EQ_TYPE[b.type], b.f, b.q, b.gain || 0));
+  const fs = bands.map(b => F(S, EQ_TYPE[b.type], b.f, biquadQ(EQ_TYPE[b.type], b.q), b.gain || 0));
   for (let i = 1; i < fs.length; i++) fs[i - 1].connect(fs[i]);
   return [fs[0], fs[fs.length - 1]];
 }
@@ -864,28 +879,71 @@ function createSynth(ctx, dest, opts = {}) {
   const nd = S.noise.getChannelData(0); for (let i = 0; i < nlen; i++) nd[i] = Math.random() * 2 - 1;
 
   const master = G(S, 0.72);
-  // musicbox: mastering. A subsonic filter first: below about 32 Hz there is nothing musical, only
-  // rumble that costs headroom and makes small subwoofers boom. Then the score's mix eq (eq mix ...).
-  // Scrimshaw had a fixed +2 dB low shelf at 180 Hz and -2.5 dB high shelf at 7.5 kHz here, to warm
-  // and soften raw oscillators; the instruments do that themselves now, so the master is neutral.
-  const sub1 = F(S, 'highpass', 32, .54), sub2 = F(S, 'highpass', 32, 1.31);
+  // musicbox: mastering. A high pass filter first (by default 24 dB per octave at 32 Hz): below
+  // that there is nothing musical, only rumble that costs headroom and makes small subwoofers
+  // boom. Then the score's mix eq (eq mix ...). Scrimshaw had a fixed +2 dB low shelf at 180 Hz and
+  // -2.5 dB high shelf at 7.5 kHz here, to warm and soften raw oscillators; the instruments do that
+  // themselves now, so the master is neutral. The filter has four sections; the ones a slope
+  // doesn't use are 0 dB shelves, which pass everything unchanged.
+  const hpf = [0, 1, 2, 3].map(() => F(S, 'highshelf', 1000, 0.7, 0));
+  for (let i = 1; i < hpf.length; i++) hpf[i - 1].connect(hpf[i]);
   const mixIn = G(S, 1), mixOut = G(S, 1); mixIn.connect(mixOut);
-  let mixKey = '[]', mixNodes = null;
-  const setMixEq = bands => {
-    const key = JSON.stringify(bands || []); if (key === mixKey) return; mixKey = key;
-    mixIn.disconnect(); if (mixNodes) mixNodes[1].disconnect();
-    mixNodes = eqChain(S, bands);
-    if (mixNodes) { mixIn.connect(mixNodes[0]); mixNodes[1].connect(mixOut); } else mixIn.connect(mixOut);
+  // musicbox: the mix eq can change while the music plays (an editor drags its bands). The same
+  // kinds of band in the same order only glide to their new settings, so nothing clicks; other
+  // changes rebuild the chain. Bypassed, the bands are kept but the mix goes round them.
+  let mixBands = [], mixFs = [], mixOff = false;
+  const wireMix = () => {
+    mixIn.disconnect(); for (const f of mixFs) f.disconnect();
+    if (mixOff || !mixFs.length) { mixIn.connect(mixOut); return; }
+    mixIn.connect(mixFs[0]);
+    for (let i = 1; i < mixFs.length; i++) mixFs[i - 1].connect(mixFs[i]);
+    mixFs[mixFs.length - 1].connect(mixOut);
+  };
+  const setMixEq = (bands = []) => {
+    bands = bands || [];
+    if (bands.length === mixBands.length && bands.every((b, i) => b.type === mixBands[i].type)) {
+      const t = ctx.currentTime;
+      bands.forEach((b, i) => {
+        const f = mixFs[i];
+        f.frequency.setTargetAtTime(clamp(b.f, 10, S.nyq * 0.95), t, 0.015);
+        f.Q.setTargetAtTime(biquadQ(f.type, b.q), t, 0.015);
+        f.gain.setTargetAtTime(b.gain || 0, t, 0.015);
+      });
+    } else {
+      for (const f of mixFs) f.disconnect();
+      mixFs = bands.map(b => F(S, EQ_TYPE[b.type], b.f, biquadQ(EQ_TYPE[b.type], b.q), b.gain || 0));
+      wireMix();
+    }
+    mixBands = bands.map(b => Object.assign({}, b));
   };
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -15; comp.knee.value = 10; comp.ratio.value = 3.2; comp.attack.value = 0.006; comp.release.value = 0.22;
   const out = G(S, 1);
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = -3; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.001; limiter.release.value = 0.1;
+  // musicbox: the score's master line: the level into the chain, the high pass filter, the
+  // compressor and the limiter. Off is a transparent setting (0 dB shelves, a 1:1 ratio) rather than
+  // a rewire, so an editor can change the master while the music plays without a click.
+  const setMaster = m => {
+    const d = Object.assign(masterDefaults(), m || {}), t = ctx.currentTime;
+    const glide = (p, v) => { p.cancelScheduledValues(t); p.setTargetAtTime(v, t, 0.02); };
+    const jump = (p, v) => { p.cancelScheduledValues(t); p.setValueAtTime(v, t); };
+    glide(master.gain, 0.72 * Math.pow(10, (d.gain || 0) / 20));
+    const st = highpassStages(d.highpass);
+    hpf.forEach((f, i) => {
+      const type = st[i] ? 'highpass' : 'highshelf', set = f.type === type ? glide : jump;
+      if (f.type !== type) f.type = type; // a section joining or leaving takes its settings at once
+      if (st[i]) { set(f.frequency, clamp(st[i].f, 10, S.nyq * 0.95)); set(f.Q, biquadQ('highpass', st[i].q)); }
+      else set(f.gain, 0);
+    });
+    glide(comp.threshold, d.comp ? d.comp.threshold : 0); glide(comp.ratio, d.comp ? d.comp.ratio : 1);
+    glide(limiter.threshold, d.limit ? d.limit.threshold : 0); glide(limiter.ratio, d.limit ? 20 : 1);
+  };
   if (opts.raw) {
     // measurement chain: rough K-weighting, no compression
     master.connect(F(S, 'highpass', 60, .7)).connect(F(S, 'highshelf', 1500, .7, 4)).connect(out).connect(dest);
-  } else { master.connect(sub1).connect(sub2).connect(mixIn); mixOut.connect(comp).connect(limiter).connect(out).connect(dest); }
+  } else { master.connect(hpf[0]); hpf[hpf.length - 1].connect(mixIn); mixOut.connect(comp).connect(limiter).connect(out).connect(dest); }
+  setMaster(); // musicbox: the default chain until a session sets the score's
   const analyser = ctx.createAnalyser(); analyser.fftSize = 1024; out.connect(analyser);
 
   const verb = ctx.createConvolver(); verb.buffer = makeIR(ctx, 2.8, 3.4);
@@ -895,6 +953,10 @@ function createSynth(ctx, dest, opts = {}) {
 
   return {
     S, master, out, analyser, verbRet, comp, limiter, // musicbox: comp and limiter, for meters
+    // musicbox: for editors: change the mix eq now (the next session sets its score's eq again),
+    // or listen without it
+    setMixEq, setMaster,
+    bypassMixEq(on) { if (mixOff === !!on) return; mixOff = !!on; wireMix(); },
     // a session bus lets "stop" silence everything already scheduled
     // build plucked-string buffers ahead of time, a few at a time
     warm(song, budgetMs = 12) {
@@ -951,6 +1013,7 @@ function createSynth(ctx, dest, opts = {}) {
       const sendBus = G(S, 1); sendBus.connect(verbIn);
       verbRet.gain.setValueAtTime(0.25 + 1.6 * (song.reverb != null ? song.reverb : 0.3), ctx.currentTime);
       setMixEq(song.mixEq); // musicbox: the score's mix eq
+      setMaster(song.master); // musicbox: and its master line
       const stops = []; // musicbox: cleanups for voice bodies
       const ch = song.voices.map(v => {
         const def = v.drum ? DRUM[v.inst] : INST[v.inst];
@@ -1029,4 +1092,4 @@ async function renderOffline(song, seconds, sampleRate = 44100, opts = {}) { // 
 }
 
 
-export { createSynth, renderOffline, INST, DRUM, BED, mtof };
+export { createSynth, renderOffline, INST, DRUM, BED, mtof, biquadQ, highpassStages, EQ_TYPE };

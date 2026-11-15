@@ -422,7 +422,7 @@ function renderChain(bands, m) {
   if (bands) chainBands = bands;
   m = m || dyn.value;
   const minus = s => String(s).replace('-', '−');
-  const set = (k, text, off) => { ui.chain[k].textContent = text; ui.chain[k].parentElement.classList.toggle('off', !!off); };
+  const set = (k, text, off) => { ui.chain[k].textContent = ui.chain[k].title = text; ui.chain[k].parentElement.classList.toggle('off', !!off); };
   set('gain', minus(`${m.gain > 0 ? '+' : ''}${m.gain} dB`));
   const hp = m.highpass;
   set('highpass', hp ? `${hp.f} Hz` + (hp.slope !== 24 ? ` · ${hp.slope} dB` : '') + (hp.q !== 0.707 ? ` · Q ${hp.q}` : '') : 'off', !hp);

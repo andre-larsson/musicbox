@@ -134,13 +134,22 @@
   @media (prefers-reduced-motion: reduce) { #note { transition: none; } }
 
   /* master: the chain, the scope, the meters and the mix eq */
-  /* the arrow leads each stage, so a line that wraps starts with one instead of ending on one */
-  .chain { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
-  .chain li { display: flex; align-items: center; gap: 6px; }
-  .chain li + li::before { content: "→"; content: "→" / ""; color: var(--muted); }
-  .chain button { padding: 2px 9px; border-radius: 999px; font-size: 12px; background: var(--panel); }
+  /* the chain is a fixed grid, a stage per cell with its name over its setting: a setting that
+     grows as a slider moves never rewraps the chain and moves the panel under the pointer.
+     High pass and compressor settings run longest, so their cells are wider. A narrow panel takes
+     three stages a row; the arrows sit in the gaps between stages. */
+  .master { container-type: inline-size; }
+  .chain { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.3fr) minmax(0, .8fr) minmax(0, 1.25fr) minmax(0, .8fr); gap: 6px 16px; font-size: 12px; }
+  .chain li { position: relative; min-width: 0; }
+  .chain li + li::before { content: "→"; content: "→" / ""; position: absolute; right: 100%; top: 50%; width: 16px; transform: translateY(-50%); text-align: center; color: var(--muted); }
+  @container (max-width: 460px) {
+    .chain { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .chain li:nth-child(3n+1)::before { content: none; }
+  }
+  .chain button { display: flex; flex-direction: column; align-items: stretch; width: 100%; padding: 3px 6px; border-radius: 8px; font-size: 12px; line-height: 1.35; background: var(--panel); text-align: center; }
   .chain button:hover { border-color: var(--muted); }
-  .chain small { color: var(--muted); margin-left: 3px; }
+  .chain button > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chain small { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
   .chain button.off { border-style: dashed; color: var(--muted); }
   .stage { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .stage.flash { animation: flash 1s ease-out; }
@@ -279,11 +288,11 @@
       <h2><span id="masterH">Master</span>
         <button id="bypass" class="small" type="button" aria-pressed="false" title="Listen without the mix eq, to compare">Bypass eq</button></h2>
       <ol class="chain" aria-label="The mastering chain, in order. Each stage jumps to its controls.">
-        <li><button type="button" data-stage="gain">Gain <small id="cGain">0 dB</small></button></li>
-        <li><button type="button" data-stage="highpass">High pass <small id="cHighpass">32 Hz</small></button></li>
-        <li><button type="button" data-stage="eq">Mix eq <small id="cEq">neutral</small></button></li>
-        <li><button type="button" data-stage="comp">Compressor <small id="cComp">−15 dB · 3.2:1</small></button></li>
-        <li><button type="button" data-stage="limit">Limiter <small id="cLimit">−3 dB</small></button></li>
+        <li><button type="button" data-stage="gain"><span>Gain</span> <small id="cGain">0 dB</small></button></li>
+        <li><button type="button" data-stage="highpass"><span>High pass</span> <small id="cHighpass">32 Hz</small></button></li>
+        <li><button type="button" data-stage="eq"><span>Mix eq</span> <small id="cEq">neutral</small></button></li>
+        <li><button type="button" data-stage="comp"><span>Compressor</span> <small id="cComp">−15 dB · 3.2:1</small></button></li>
+        <li><button type="button" data-stage="limit"><span>Limiter</span> <small id="cLimit">−3 dB</small></button></li>
       </ol>
       <canvas id="scope" role="img" aria-label="Spectrum of the master output, with the mix eq curve and its bands"></canvas>
       <div class="legend" aria-hidden="true">

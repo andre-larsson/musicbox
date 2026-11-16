@@ -1,7 +1,7 @@
 // The score's mastering lines as text, `eq mix` and `master`: the master panel edits them and
 // writes them back here. Eq bands are { type, f, gain, q }, the shape the compiler gives in
 // song.mixEq; the master is { gain, highpass: { f, slope, q }, comp: { threshold, ratio },
-// limit: { threshold } }, with null for a stage that is off, as in song.master.
+// limit: { threshold, makeup } }, with null for a stage that is off, as in song.master.
 
 import { masterDefaults } from '../src/score.js';
 
@@ -87,7 +87,7 @@ export function withoutMasteringLines(text) {
   return text.split('\n').filter(l => !MIX_LINE.test(l) && !MASTER_LINE.test(l)).join('\n');
 }
 
-export const MASTER_LIMITS = { gain: [-24, 24], highpass: [20, 1000], resonance: [0.5, 6], compThreshold: [-60, 0], ratio: [1, 20], limitThreshold: [-24, 0] };
+export const MASTER_LIMITS = { gain: [-24, 24], highpass: [20, 1000], resonance: [0.5, 6], compThreshold: [-60, 0], ratio: [1, 20], limitThreshold: [-24, 0], makeup: [-24, 24] };
 export const SLOPES = [12, 24, 36, 48];
 const r1 = x => Math.round(x * 10) / 10;
 
@@ -103,7 +103,7 @@ export function roundMaster(m) {
       q: Math.abs(d.highpass.q - 0.707) < 0.005 ? 0.707 : Math.round(c(d.highpass.q, L.resonance) * 100) / 100
     } : null,
     comp: d.comp ? { threshold: r1(c(d.comp.threshold, L.compThreshold)), ratio: r1(c(d.comp.ratio, L.ratio)) } : null,
-    limit: d.limit ? { threshold: r1(c(d.limit.threshold, L.limitThreshold)) } : null
+    limit: d.limit ? { threshold: r1(c(d.limit.threshold, L.limitThreshold)), makeup: r1(c(d.limit.makeup, L.makeup)) } : null
   };
 }
 
@@ -121,6 +121,6 @@ export function formatMaster(m) {
   if (!r.comp) out.push('comp=off');
   else if (r.comp.threshold !== d.comp.threshold || r.comp.ratio !== d.comp.ratio) out.push(`comp=${r.comp.threshold},${r.comp.ratio}`);
   if (!r.limit) out.push('limit=off');
-  else if (r.limit.threshold !== d.limit.threshold) out.push(`limit=${r.limit.threshold}`);
+  else if (r.limit.threshold !== d.limit.threshold || r.limit.makeup !== 0) out.push(`limit=${r.limit.threshold}` + (r.limit.makeup ? `,${sg(r.limit.makeup)}` : ''));
   return out.length ? 'master ' + out.join(' ') : null;
 }

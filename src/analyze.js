@@ -25,7 +25,7 @@ function masterText(m) {
     `gain ${db(m.gain)}`,
     hp ? `high pass ${hp.f} Hz ${hp.slope} dB/oct${hp.q !== 0.707 ? ` Q${hp.q}` : ''}` : 'high pass off',
     m.comp ? `compressor ${db(m.comp.threshold)} ${m.comp.ratio}:1` : 'compressor off',
-    m.limit ? `limiter ${db(m.limit.threshold)}` : 'limiter off'
+    m.limit ? `limiter ${db(m.limit.threshold)}` + (m.limit.makeup ? `, make-up ${db(m.limit.makeup)}` : '') : 'limiter off'
   ].join(', ');
 }
 

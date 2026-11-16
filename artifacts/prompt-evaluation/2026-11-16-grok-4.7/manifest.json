@@ -1,0 +1,114 @@
+{
+  "created_at": "2026-11-16T21:36:31.191150+00:00",
+  "model": "grok-4.7-xhigh-fast",
+  "guide_sha256": "cde71c27ca18cee6b27214b3cf76d2bed68661614d6289365de0b5a37ec7b147",
+  "source_access": "/home/andre/code hidden by bubblewrap; empty workspace; Ask mode; no tools allowed; tool events audited",
+  "cases": [
+    {
+      "name": "waltz",
+      "status": "exited",
+      "exit_code": 0,
+      "seconds": 402.6,
+      "tool_calls": 0,
+      "event_count": 2653,
+      "score_blocks": 1,
+      "request_sha256": "86b96d631cb13a970f019b59436bc0d6ae3ea1ec80715db89cb3e906e0b72aec"
+    },
+    {
+      "name": "ambient",
+      "status": "exited",
+      "exit_code": 0,
+      "seconds": 211.49,
+      "tool_calls": 0,
+      "event_count": 3288,
+      "score_blocks": 1,
+      "request_sha256": "2cfab43cf0b1e0c2ce0d83c9b706f88aafd218bd7e71e23ad0a330776c184c35"
+    },
+    {
+      "name": "adaptive",
+      "status": "exited",
+      "exit_code": 0,
+      "seconds": 683.77,
+      "tool_calls": 0,
+      "event_count": 9279,
+      "score_blocks": 1,
+      "request_sha256": "d65d6aa99aa2f981d30aa20d06c2368c997c5df8842b6fc9bbc2e72c036881fe"
+    }
+  ],
+  "validation_summary": [
+    {
+      "name": "waltz",
+      "title": "Glasshouse Waltz",
+      "checks": {
+        "no_errors": true,
+        "no_warnings": true,
+        "no_range_findings": true,
+        "no_random_clashes": true,
+        "loops_at_least_16_bars": true,
+        "requested_meter": true,
+        "requested_key": true,
+        "requested_tempo": true,
+        "requested_instruments": true,
+        "no_layers_or_beds": true,
+        "requested_cues": true,
+        "runtime": true
+      },
+      "harmony_findings": 0,
+      "key_findings": 0
+    },
+    {
+      "name": "adaptive",
+      "title": "The Brass Observatory",
+      "checks": {
+        "no_errors": true,
+        "no_warnings": true,
+        "no_range_findings": true,
+        "no_random_clashes": true,
+        "loops_at_least_16_bars": true,
+        "requested_cues": true,
+        "layers_0_1_2": true,
+        "bed_present": true,
+        "victory_returns": true,
+        "transition_fill": true,
+        "limiter_makeup": true,
+        "runtime": true
+      },
+      "harmony_findings": 0,
+      "key_findings": 0
+    },
+    {
+      "name": "ambient",
+      "title": "Roots in the Archive",
+      "checks": {
+        "no_errors": true,
+        "no_warnings": true,
+        "no_range_findings": true,
+        "no_random_clashes": true,
+        "loops_at_least_16_bars": true,
+        "requested_cues": true,
+        "requested_key": true,
+        "random_pattern_choices": true,
+        "layer_1": true,
+        "random_notes": true,
+        "harp_arpeggiator": true,
+        "beds": true,
+        "runtime": true
+      },
+      "harmony_findings": 0,
+      "key_findings": 0
+    }
+  ],
+  "host_revision": "uncommitted workspace changes; source and artifact hashes recorded separately",
+  "checker_sources": {
+    "src/score.js": "0ca865dc20a446809ce489cc1b44be414021287a150bea5bb51b4970e0f68e95",
+    "src/analyze.js": "013c4ba9dfc7698782dd916695a2aa7f4df2107e2b6de626afaf8fbddff885c2",
+    "src/player.js": "6035a37f158edcaa36ca054ef3b93ddc943e32c4e9887476bf4ae5621fd34f10",
+    "src/random.js": "a8cd8c74560615b68a284b2010ae452b8f99852b04bbb7bdf0cccd38ecdbc208"
+  },
+  "notes": [
+    "Three fresh composition sessions, not source-aware reviews.",
+    "Host validation only: the model did not receive checker feedback or read implementation code.",
+    "Initial harness startup failed before any model invocation because /dev was not mounted correctly. The device mount was fixed; Ask mode, sandbox-enabled mode and repository hiding were retained.",
+    "Raw model thinking streams remain in private temporary logs and are not included in these artifacts."
+  ]
+}

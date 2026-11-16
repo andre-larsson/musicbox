@@ -1,0 +1,62 @@
+{
+  "name": "ambient",
+  "title": "Roots in the Archive",
+  "checks": {
+    "no_errors": true,
+    "no_warnings": true,
+    "no_range_findings": true,
+    "no_random_clashes": true,
+    "loops_at_least_16_bars": true,
+    "requested_cues": true,
+    "requested_key": true,
+    "random_pattern_choices": true,
+    "layer_1": true,
+    "random_notes": true,
+    "harp_arpeggiator": true,
+    "beds": true,
+    "runtime": true
+  },
+  "errors": [],
+  "warnings": [],
+  "loops": {
+    "quiet": 24,
+    "alert": 24
+  },
+  "layers": [
+    0,
+    1
+  ],
+  "findings": {
+    "range": [],
+    "harmony": [],
+    "pick": [],
+    "key": []
+  },
+  "runtime": [
+    {
+      "cue": "quiet",
+      "intensity": 0,
+      "scheduled_events": 59,
+      "final_cue": "quiet"
+    },
+    {
+      "cue": "quiet",
+      "intensity": 1,
+      "scheduled_events": 59,
+      "final_cue": "quiet"
+    },
+    {
+      "cue": "alert",
+      "intensity": 0,
+      "scheduled_events": 65,
+      "final_cue": "alert"
+    },
+    {
+      "cue": "alert",
+      "intensity": 1,
+      "scheduled_events": 65,
+      "final_cue": "alert"
+    }
+  ],
+  "runtimeError": null
+}

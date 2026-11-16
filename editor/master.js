@@ -30,7 +30,7 @@ const hz = f => f >= 1000 ? formatFreq(f).replace('k', ' kHz') : Math.round(f) +
 const snapF = f => { const t = formatFreq(f); return t.endsWith('k') ? parseFloat(t) * 1000 : +t; };
 const dbText = (v, digits = 1) => { const t = Math.abs(v).toFixed(digits); return (+t === 0 ? '' : v > 0 ? '+' : '−') + t; };
 
-export function createMaster(els, { onChange, onBypass }) {
+export function createMaster(els, { onChange, onBypass, onSelect = () => {} }) {
   const { canvas, list, add, bypass, line, meters, note } = els;
   const g = canvas.getContext('2d');
   let bands = [], selected = -1, hoverX = null, drag = null;
@@ -51,7 +51,7 @@ export function createMaster(els, { onChange, onBypass }) {
   function resize() {
     dpr = Math.min(2, devicePixelRatio || 1);
     const r = canvas.getBoundingClientRect();
-    W = Math.max(200, Math.round(r.width)); H = Math.max(120, Math.round(r.height));
+    W = Math.max(1, Math.round(r.width)); H = Math.max(64, Math.round(r.height));
     canvas.width = W * dpr; canvas.height = H * dpr;
     n = Math.max(64, Math.floor(plotW() / 2) + 1); // a point every two pixels
     freqs = new Float32Array(n);
@@ -183,6 +183,7 @@ export function createMaster(els, { onChange, onBypass }) {
   }
 
   function select(i) {
+    onSelect();
     if (selected === i) return;
     selected = i; dirty = true;
     for (const row of list.querySelectorAll('.band')) row.classList.toggle('sel', +row.dataset.i === i);
@@ -190,11 +191,12 @@ export function createMaster(els, { onChange, onBypass }) {
 
   function addBand(f = 1000, gain = 0) {
     if (bands.length >= 8) return;
+    onSelect();
     bands.push(roundBand({ type: 'peak', f, gain, q: 1 }));
     selected = bands.length - 1;
     renderList(); changed(true);
     const row = list.querySelector(`.band[data-i="${selected}"] input`);
-    if (row) row.focus();
+    if (row) row.focus({ preventScroll: true });
   }
   add.onclick = () => {
     // a free spot: the largest gap between the bands already there
@@ -263,7 +265,7 @@ export function createMaster(els, { onChange, onBypass }) {
 
   function attach(syn, ctx) {
     if (au) return;
-    const src = syn.limiter; // the mastered signal, before the editor's volume
+    const src = syn.limitMakeup || syn.limiter; // the mastered signal, including make-up gain, before the editor's volume
     const split = ctx.createChannelSplitter(2);
     src.connect(split);
     const spectrum = ctx.createAnalyser();
@@ -377,7 +379,8 @@ export function createMaster(els, { onChange, onBypass }) {
 
     // grid: octaves-ish frequency lines and eq gain lines
     g.lineWidth = 1;
-    for (const f of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) {
+    const ticks = W < 260 ? [100, 1000, 10000] : W < 420 ? [50, 200, 1000, 5000, 10000] : [50, 100, 200, 500, 1000, 2000, 5000, 10000];
+    for (const f of ticks) {
       const x = Math.round(X(fx(f))) + 0.5;
       g.strokeStyle = c.line; g.globalAlpha = 0.9;
       g.beginPath(); g.moveTo(x, PAD.t); g.lineTo(x, H - PAD.b); g.stroke();
@@ -385,7 +388,7 @@ export function createMaster(els, { onChange, onBypass }) {
       g.fillText(f >= 1000 ? f / 1000 + 'k' : String(f), x, H - PAD.b / 2);
     }
     g.textAlign = 'left';
-    for (const d of [-12, -6, 0, 6, 12]) {
+    for (const d of H < 120 ? [-12, 0, 12] : [-12, -6, 0, 6, 12]) {
       const y = Math.round(eqY(d)) + 0.5;
       g.strokeStyle = c.line; g.globalAlpha = d === 0 ? 1 : 0.5;
       g.setLineDash(d === 0 ? [] : [2, 3]);

@@ -12,6 +12,8 @@ The most common mistake is a bar with the wrong number of steps. Count every bar
 - **In another project:** check with `npx -y github:andre-larsson/musicbox check FILE.scrim`, then give the user a link that opens the score in the online editor, ready to play: `npx -y github:andre-larsson/musicbox link FILE.scrim`. If the user sends a link back with edits, `link --decode LINK` prints its score.
 - **In a chat:** reply with one complete score in a single fenced code block, followed by no more than a couple of sentences. If error messages are pasted back, fix the lines they point to and reply with the whole corrected score.
 
+The editor's **Open** button accepts a score file or pasted score text, including one Markdown code block. Include the `title`, and `composer` and `about` when useful; the editor reads these from the score. Imported scores and subsequent edits save in the browser. **Copy link** shares the complete score with its edits.
+
 Use only the keywords, instruments, chord names and symbols described here.
 
 ## Composing process
@@ -25,6 +27,13 @@ Use only the keywords, instruments, chord names and symbols described here.
 7. **Variation.** Music that plays for a long time, such as ambient or exploration cues, shouldn't repeat note for note. Let the player vary it: random notes, notes that only sometimes play, and patterns picked at random (see Random parts). Add a bed (sea, wind, rain or a drone) for a continuous background.
 8. **Transitions.** Write `switch` lines so that every cue change the game makes lands musically. A one-bar `via` pattern (a drum fill or a stab) helps when the tempo or mood jumps.
 9. **Check and revise.** Run the checker, read the analysis, fix one pattern at a time, and listen.
+
+## Finish and hand over
+
+- Deliver a complete `.scrim` score, with every voice, bed, pattern and cue it uses. Do not leave placeholders or depend on external audio files.
+- Run the checker until there are no errors. Review warnings and analysis findings: instrument ranges, strong-beat non-chord notes, random choices that rub against the harmony, and notes outside the key. Keep a finding only when it is musically deliberate.
+- Give the user a listen link from `musicbox link` and ask them to try every cue and intensity level. Describe what each layer adds. Do not claim to have heard the result unless you actually listened; successful checks do not establish that the music sounds good.
+- When the user gives listening notes, revise one pattern at a time. Keep the rest of the score and the agreed brief intact.
 
 ## Layout
 
@@ -141,7 +150,7 @@ A `master` line changes the rest of the chain. Leave out what you don't change; 
 - `gain=DB` the level into the chain, -24 to +24 (default 0). Lower it to make the music quieter and squeeze it less.
 - `highpass=FREQ[,SLOPE[,Q]]` the high pass filter: the cutoff, 20 to 1000 Hz (default 32); how steeply it cuts below that, 12, 24, 36 or 48 dB per octave (default 24); and its resonance, a Q from 0.5 to 6 (default 0.707, none; higher makes a peak at the cutoff). Or `off`. Raise the cutoff to 60 to 100 Hz for a lighter low end on small speakers.
 - `comp=THRESHOLD,RATIO` the compressor: threshold -60 to 0 dB, ratio 1 to 20 (default -15,3.2), or `off`
-- `limit=THRESHOLD` the limiter's threshold, -24 to 0 dB (default -3), or `off`
+- `limit=THRESHOLD[,MAKEUP]` the limiter's threshold, -24 to 0 dB (default -3), and optional make-up gain after limiting, -24 to +24 dB (default 0), or `off`. For example, `limit=-3,+2` adds 2 dB after the limiter. Positive make-up gain raises the output peaks too; it does not keep the same ceiling. Switching the limiter off bypasses its make-up gain as well.
 
 ```
 master gain=-4 comp=-18,2.5   # quieter, and a gentler compressor for a calm score
@@ -377,7 +386,7 @@ cue shore
 loop A {B C}
 ```
 
-Longer examples are in `scores/demo/`: `tide-caves.scrim` (three cues, three layers and a victory fanfare), `night-ferry.scrim` (every random part, and beds that change between cues) and `brinelight.scrim` (a generative pad-and-pluck score over the sea).
+Longer examples are in `scores/demo/`: `brinelight.scrim` (the full game score, with nine cues and three depth layers), `tide-caves.scrim` (three cues, three layers and a victory fanfare) and `night-ferry.scrim` (every random part, and beds that change between cues).
 
 ## Composing tips
 

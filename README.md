@@ -20,12 +20,17 @@ npm run preview                               # build, then serve dist/ the way 
 
 Pushing to `main` runs the tests, builds the site and deploys it to GitHub Pages (`.github/workflows/pages.yml`).
 
-The editor plays any score in `scores/`. It has a button for each cue, a slider for intensity, and mute and solo for each voice and bed (voices that can't be heard in the cue or at the intensity playing are dimmed), and it reloads the music when a `.scrim` file is saved. That makes it the listening side of the loop when an agent is writing the score. The status line shows the seed of the current performance.
+The editor plays any score in `scores/`. It has a button for each cue, a slider for intensity, and mute and solo for each voice and bed (voices that can't be heard in the cue or at the intensity playing are dimmed), and it reloads the music when a `.scrim` file is saved. Scores without intensity layers hide the slider while keeping its space reserved. The status line shows the seed of the current performance.
 
 - **Timeline.** The cue playing, its intro and its loop, pattern by pattern with bar lines and a playhead. Click or drag to jump to a bar; the arrow keys move a bar, Shift and the arrow keys a pattern. Patterns picked at random say what they were picked from. Space pauses and resumes.
-- **Master.** A live spectrum of the mastered output with the mix eq drawn over it, meters for loudness (LUFS) and peaks, and controls for each stage of the chain: gain, a high pass filter (cutoff, slope and resonance), the mix eq's bands, the compressor and the limiter, with how hard each of those two works. Drag a band's point on the spectrum, type its values or move a slider; the music changes as you go, and the editor writes the `eq mix` and `master` lines into the score. Bypass eq plays the mix without the eq, to compare.
+- **New and Open.** New starts a small editable score. Open accepts a `.scrim` or text file, or a complete pasted score, including a Markdown code block from an agent. Both musicbox and original Scrimshaw scores work. The title, composer, description, instruments, cues and settings come from the score text.
+- **Browser library.** New scores, imports, shared scores and edits save automatically in this browser, including unfinished drafts with errors. Editing a sample creates a browser copy; the original stays under **Sample scores**. Your copies appear under **In this browser**, and the last selection reopens on reload. The save status reports storage failures. **Browser data…** in the footer lets you delete all local scores and return to the samples; it asks before deleting. Use **Copy link** to keep or share a score outside this browser.
+- **Master.** The spectrum, meters and effect selector stay in view while you adjust an effect. The chain buttons select one effect's controls at a time; the graph sits beside them when the panel is wide enough. Drag a band's point on the spectrum, type its values or move a slider; the music changes as you go, and the editor writes the `eq mix` and `master` lines into the score. The limiter has a make-up gain control after limiting; it defaults to 0 dB and is included in the output meters. Bypass eq plays the mix without the eq, to compare. Display explanations and generated score settings are under **Display guide & score settings**. Problems appears below Master.
+- **Format.** An in-page guide explains notes, patterns, cues and layers. **Copy for AI** copies the complete [Markdown composing instructions](docs/PROMPT.md), including the syntax, examples and commands to check a score and make a listen link. Paste them into an AI chat with your music brief.
 
-Demos in `scores/demo/`: `tide-caves` (cues, layers, a fill and a fanfare), `night-ferry` (every random part, and beds that change between cues) and `brinelight` (a port of the generative pad-and-pluck score from the browser game [Brinelight](https://andre-larsson.github.io/brinelight/)).
+Demos in `scores/demo/`: `brinelight` (the full score from the browser game [Brinelight](https://andre-larsson.github.io/brinelight/), selected by default), `tide-caves` (cues, layers, a fill and a fanfare) and `night-ferry` (every random part, and beds that change between cues).
+
+`brinelight.scrim` is copied unchanged from the game's `music/brinelight.scrim` at commit `0ba0727`. Its nine cues cover the title, exploration, fights, Dreads, both boss phases, the Tolling Buoy, coming home and falling. Intensity 0 is the Shallows; 1 adds a far bell and a low drone for Dark Water; 2 adds a choir for the Belfry. Brinelight's separate Gemini-generated recordings are not part of this synthesized score. The original Scrimshaw tunes are kept only in `test/fixtures/scrimshaw/` for compatibility checks.
 
 ## In a game
 
@@ -135,7 +140,8 @@ bin/serve.js     dev server with live reload; --static serves a build
 bin/build.js     builds the static site into dist/
 src/link.js      listen links: a score inside a URL
 editor/          the editor page
-scores/          demo/ (musicbox features) and scrimshaw/ (the upstream examples, used as regression fixtures)
+scores/demo/     Brinelight's game score and musicbox feature demos
+test/fixtures/   upstream Scrimshaw examples for compatibility checks
 docs/PROMPT.md   format reference and composing guide
 ```
 

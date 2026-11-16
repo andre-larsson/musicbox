@@ -1,0 +1,93 @@
+{
+  "name": "adaptive",
+  "title": "The Brass Observatory",
+  "checks": {
+    "no_errors": true,
+    "no_warnings": true,
+    "no_range_findings": true,
+    "no_random_clashes": true,
+    "loops_at_least_16_bars": true,
+    "requested_cues": true,
+    "layers_0_1_2": true,
+    "bed_present": true,
+    "victory_returns": true,
+    "transition_fill": true,
+    "limiter_makeup": true,
+    "runtime": true
+  },
+  "errors": [],
+  "warnings": [],
+  "loops": {
+    "explore": 16,
+    "combat": 16,
+    "victory": 0
+  },
+  "layers": [
+    0,
+    1,
+    2
+  ],
+  "findings": {
+    "range": [],
+    "harmony": [],
+    "pick": [],
+    "key": []
+  },
+  "runtime": [
+    {
+      "cue": "explore",
+      "intensity": 0,
+      "scheduled_events": 232,
+      "final_cue": "explore"
+    },
+    {
+      "cue": "explore",
+      "intensity": 1,
+      "scheduled_events": 232,
+      "final_cue": "explore"
+    },
+    {
+      "cue": "explore",
+      "intensity": 2,
+      "scheduled_events": 232,
+      "final_cue": "explore"
+    },
+    {
+      "cue": "combat",
+      "intensity": 0,
+      "scheduled_events": 703,
+      "final_cue": "combat"
+    },
+    {
+      "cue": "combat",
+      "intensity": 1,
+      "scheduled_events": 703,
+      "final_cue": "combat"
+    },
+    {
+      "cue": "combat",
+      "intensity": 2,
+      "scheduled_events": 703,
+      "final_cue": "combat"
+    },
+    {
+      "cue": "victory",
+      "intensity": 0,
+      "scheduled_events": 237,
+      "final_cue": "explore"
+    },
+    {
+      "cue": "victory",
+      "intensity": 1,
+      "scheduled_events": 237,
+      "final_cue": "explore"
+    },
+    {
+      "cue": "victory",
+      "intensity": 2,
+      "scheduled_events": 237,
+      "final_cue": "explore"
+    }
+  ],
+  "runtimeError": null
+}

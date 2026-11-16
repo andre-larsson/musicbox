@@ -5,13 +5,18 @@ import { scoreLink, scoreCode, decodeScore } from '../src/link.js';
 import { createTimeline, formatTime } from './timeline.js';
 import { createMaster } from './master.js';
 import { createDynamics } from './dynamics.js';
+import { createEffectTabs } from './effects.js';
+import { createFormatGuide } from './guide.js';
+import { createScoreLibrary, scoreInfo, NEW_SCORE } from './library.js';
+import { createOpenScore, createResetLibrary } from './scorefiles.js';
 import { setMixLine, setMasterLine, formatMaster, withoutMasteringLines } from './mastertext.js';
 
 const $ = s => document.querySelector(s);
 const ui = {
   file: $('#file'), play: $('#play'), playPath: $('#playPath'), playLabel: $('#playLabel'), stop: $('#stop'),
   prev: $('#prev'), next: $('#next'), cues: $('#cues'), intensity: $('#intensity'),
-  intensityVal: $('#intensityVal'), volume: $('#volume'), status: $('#status'), score: $('#score'),
+  intensityVal: $('#intensityVal'), intensityGroup: $('#intensityGroup'), volume: $('#volume'), status: $('#status'), score: $('#score'),
+  scoreTitle: $('#scoreTitle'), scoreMeta: $('#scoreMeta'), scoreAbout: $('#scoreAbout'), saveState: $('#saveState'),
   problems: $('#problems'), problemCount: $('#problemCount'), analysis: $('#analysis'), note: $('#note'), hint: $('#hint'), share: $('#share'),
   mixer: $('#mixer'), track: $('#track'), tNow: $('#tNow'), tEnd: $('#tEnd'),
   chain: { gain: $('#cGain'), highpass: $('#cHighpass'), eq: $('#cEq'), comp: $('#cComp'), limit: $('#cLimit') },
@@ -19,6 +24,11 @@ const ui = {
 };
 
 const player = new MusicPlayer({ volume: +ui.volume.value });
+let storage;
+try { storage = window.localStorage; } catch { /* storage can be unavailable in private or restricted contexts */ }
+const library = createScoreLibrary(storage);
+let sampleFiles = [], loadedText = '', saveTimer = 0, openGeneration = 0;
+const sampleTitles = new Map();
 let song = null;         // last compiled score (may have errors)
 let playable = null;     // last compiled score without errors
 let appliedText = null;  // the text `playable` was compiled from
@@ -97,12 +107,14 @@ function renderCues() {
   // Lowering max clamps the slider's value without an input event, so read the value back after.
   // A slider at the top stays at the top, so every layer still plays in a score with more of them.
   const layers = Math.max(0, ...s.voices.map(v => v.layer || 0), ...(s.beds || []).map(b => b.layer || 0));
-  const atTop = +ui.intensity.value >= +ui.intensity.max;
+  const atTop = ui.intensity.disabled || +ui.intensity.value >= +ui.intensity.max;
   ui.intensity.max = String(Math.max(1, layers));
   if (atTop || +ui.intensity.value > layers) ui.intensity.value = String(layers);
   ui.intensityVal.textContent = ui.intensity.value;
   player.setIntensity(+ui.intensity.value);
   ui.intensity.disabled = layers === 0;
+  ui.intensityGroup.classList.toggle('unavailable', layers === 0);
+  ui.intensityGroup.setAttribute('aria-hidden', String(layers === 0));
   renderMixer();
 }
 
@@ -189,7 +201,9 @@ function updateMixer(st) {
 
 // Compile the editor text. If it's clean and music is playing, swap it in on the next bar.
 function apply(reason) {
+  saveDraft();
   song = compile(ui.score.value);
+  showScoreInfo();
   show(song);
   if (song.errors.length) { say('Not applied: fix the errors in Problems first'); markEdited(); return; }
   playable = song;
@@ -200,7 +214,7 @@ function apply(reason) {
   master.setBands(playable.mixEq);
   dyn.set(playable.master);
   master.setHighpass(playable.master.highpass);
-  renderChain();
+  renderChain(playable.mixEq);
   renderCues();
   if (player.seg) {
     const cue = playable.cues[player.target] ? player.target : playable.defaultCue;
@@ -229,24 +243,103 @@ function markEdited() {
   ui.hint.textContent = edited ? 'Edits not applied yet · Ctrl+Enter applies them' : baseHint;
 }
 
-// `reason` is the message to show; '' loads quietly.
-async function openFile(path, reason = `Loaded ${path}`) {
-  const res = await fetch('../' + path, { cache: 'no-store' });
-  if (!res.ok) { say(`Can't load ${path} (${res.status})`); return; }
-  current = path;
-  viewCue = null;
-  ui.score.value = await res.text();
-  ui.file.value = path;
+// Repository samples stay unchanged. Editing one creates a browser copy; drafts save even with errors.
+function sampleName(path) {
+  return path.split('/').pop().replace(/\.scrim$/, '').replace(/-/g, ' ');
+}
+function showScoreInfo() {
+  const record = library.get(current);
+  const info = scoreInfo(ui.score.value, record?.name || (current ? sampleName(current) : 'Untitled'));
+  ui.scoreTitle.textContent = info.title;
+  ui.scoreMeta.textContent = [info.composer && `by ${info.composer}`, `${info.tempo} bpm`, info.key,
+    `${info.beats} beats × ${info.steps} steps`].filter(Boolean).join(' · ');
+  ui.scoreAbout.textContent = info.about;
+  ui.scoreAbout.hidden = !info.about;
+  document.title = `${info.title} · musicbox`;
+}
+function showSaveState() {
+  ui.saveState.classList.toggle('save-error', !!library.error);
+  ui.saveState.textContent = library.error || (library.get(current) ? 'Saved in this browser' : 'Sample · edits save as a browser copy');
+}
+function renderLibrary() {
+  const samples = document.createElement('optgroup'); samples.label = 'Sample scores';
+  for (const path of sampleFiles) {
+    const option = document.createElement('option');
+    option.value = path; option.textContent = sampleTitles.get(path) || sampleName(path); samples.append(option);
+  }
+  const local = document.createElement('optgroup'); local.label = 'In this browser';
+  for (const record of library.scores) {
+    const option = document.createElement('option');
+    option.value = record.id; option.textContent = scoreInfo(record.text, record.name).title; local.append(option);
+  }
+  ui.file.replaceChildren(samples, ...(local.children.length ? [local] : []));
+  if (current) ui.file.value = current;
+}
+function setScoreLocation(ref) {
   const url = new URL(location.href);
-  url.searchParams.set('score', path);
-  url.hash = '';
+  url.searchParams.set('score', ref); url.hash = '';
   history.replaceState(null, '', url);
+}
+function saveDraft() {
+  clearTimeout(saveTimer); saveTimer = 0;
+  if (!current) return;
+  const previous = library.get(current);
+  if (previous ? previous.text === ui.score.value : loadedText === ui.score.value) { showSaveState(); return; }
+  const record = library.save({ id: previous?.id, text: ui.score.value,
+    name: previous?.name || sampleTitles.get(current) || sampleName(current), source: previous ? previous.source : current });
+  current = record.id;
+  setScoreLocation(current);
+  renderLibrary(); showScoreInfo(); showSaveState();
+}
+function scheduleSave() {
+  markEdited();
+  ui.saveState.textContent = 'Saving in this browser…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveDraft, 350);
+}
+function loadEditor(text, ref, reason) {
+  player.stop(0.15);
+  playable = null; appliedText = null; viewCue = null;
+  current = ref; loadedText = text;
+  ui.score.value = text;
+  ui.cues.replaceChildren(); ui.mixer.replaceChildren();
+  ui.intensity.disabled = true;
+  ui.intensityGroup.classList.add('unavailable'); ui.intensityGroup.setAttribute('aria-hidden', 'true');
+  library.select(ref);
+  setScoreLocation(ref); renderLibrary(); showSaveState();
   apply(reason);
 }
+async function openFile(ref, reason = '') {
+  saveDraft();
+  const ticket = ++openGeneration;
+  try {
+    const record = library.get(ref);
+    let text;
+    if (record) text = record.text;
+    else {
+      if (!sampleFiles.includes(ref)) throw new Error('Score not found');
+      const response = await fetch('../' + ref, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      text = await response.text();
+      sampleTitles.set(ref, scoreInfo(text, sampleName(ref)).title);
+    }
+    if (ticket !== openGeneration) return;
+    saveDraft(); // Keep edits made while a sample was being fetched.
+    loadEditor(text, ref, reason);
+  } catch (error) {
+    if (ticket !== openGeneration) return;
+    ui.file.value = current || '';
+    say(`Could not open the score: ${error.message}`);
+  }
+}
+function openImported(text, name = 'Imported score', reuse = false) {
+  saveDraft(); ++openGeneration;
+  const previous = reuse && library.scores.find(record => record.text === text);
+  const record = previous || library.save({ text, name });
+  loadEditor(text, record.id, 'Opened the score');
+}
 
-// A static build (GitHub Pages) lists its scores in scores/index.json, written by
-// `npm run build`. Without one, the dev server lists them live and pushes reloads. URLs stay relative
-// so the editor works under a sub-path such as /musicbox/.
+// Relative URLs work both in development and under the Pages project path.
 async function listFiles() {
   try {
     const r = await fetch('../scores/index.json', { cache: 'no-store' });
@@ -258,49 +351,72 @@ async function listFiles() {
   } catch { /* no dev server either */ }
   return { files: [], dev: false };
 }
-
-// A listen link carries the whole score in the hash (#score=…); see src/link.js.
 async function openLink(code) {
+  const ticket = ++openGeneration;
   let text;
-  try { text = await decodeScore(code); } catch { say("Can't read the score in this link. It may have been cut short when it was copied."); return false; }
-  current = null;
-  viewCue = null;
-  let o = ui.file.querySelector('option[data-link]');
-  if (!o) { o = document.createElement('option'); o.dataset.link = '1'; o.disabled = true; o.textContent = '(score from a link)'; ui.file.prepend(o); }
-  o.selected = true;
-  ui.score.value = text;
-  apply('Loaded the score from the link');
+  try { text = await decodeScore(code); }
+  catch { say("Can't read the score in this link. It may have been cut short when it was copied."); return false; }
+  if (ticket === openGeneration) {
+    openImported(text, 'Shared score', true);
+    const url = new URL(location.href);
+    url.searchParams.delete('score'); url.hash = 'score=' + code;
+    history.replaceState(null, '', url); // A listen link stays portable until the score is edited.
+  }
   return true;
 }
-
 async function init() {
-  let { files, dev } = await listFiles();
-  if (!files.length) files = ['scores/demo/tide-caves.scrim'];
+  const { files, dev } = await listFiles();
+  sampleFiles = files.length ? files : ['scores/demo/brinelight.scrim'];
   baseHint = dev ? 'Ctrl+Enter applies edits · files reload when saved' : 'Ctrl+Enter applies edits';
-  markEdited();
-  for (const f of files) {
-    const o = document.createElement('option'); o.value = f; o.textContent = f.replace(/^scores\//, ''); ui.file.append(o);
-  }
+  renderLibrary();
+  const available = ref => sampleFiles.includes(ref) || !!library.get(ref);
   const wanted = new URL(location.href).searchParams.get('score');
-  const first = files.includes(wanted) ? wanted : (files.includes('scores/demo/tide-caves.scrim') ? 'scores/demo/tide-caves.scrim' : files[0]);
-  ui.file.value = first;
+  const first = available(wanted) ? wanted : available(library.selected) ? library.selected :
+    sampleFiles.includes('scores/demo/brinelight.scrim') ? 'scores/demo/brinelight.scrim' : sampleFiles[0];
   const code = scoreCode(location.hash);
-  if (!code || !(await openLink(code))) await openFile(first, '');
+  if (!code || !(await openLink(code))) await openFile(first);
+  ui.file.disabled = false;
+  $('#newScore').disabled = false; $('#openScore').disabled = false;
   addEventListener('hashchange', () => { const c = scoreCode(location.hash); if (c) openLink(c); });
-
   if (dev) try {
     const es = new EventSource('../__watch');
-    es.onmessage = ev => {
-      const { file } = JSON.parse(ev.data);
+    es.onmessage = event => {
+      const { file } = JSON.parse(event.data);
+      if (!sampleFiles.includes(file)) { sampleFiles.push(file); sampleFiles.sort(); renderLibrary(); }
       if (file === current) openFile(file, `Reloaded ${file}`);
-      else if (![...ui.file.options].some(o => o.value === file)) {
-        const o = document.createElement('option'); o.value = file; o.textContent = file.replace(/^scores\//, ''); ui.file.append(o);
-      }
     };
   } catch { /* no live reload without the dev server */ }
 }
 
 ui.file.onchange = () => openFile(ui.file.value);
+$('#newScore').onclick = () => {
+  const count = library.scores.filter(record => /^Untitled(?: \d+)?$/.test(scoreInfo(record.text, record.name).title)).length;
+  openImported(NEW_SCORE.replace('title Untitled', 'title Untitled' + (count ? ` ${count + 1}` : '')), 'Untitled');
+  ui.score.focus(); ui.score.setSelectionRange(6, ui.score.value.indexOf('\n'));
+};
+createOpenScore($('#openScore'), $('#openScoreDialog'), openImported);
+createResetLibrary($('#browserData'), $('#resetLibraryDialog'), {
+  count: () => { saveDraft(); return library.scores.length; },
+  async onReset(signal) {
+    const first = sampleFiles.includes('scores/demo/brinelight.scrim') ? 'scores/demo/brinelight.scrim' : sampleFiles[0];
+    const response = await fetch('../' + first, { cache: 'no-store', signal });
+    if (!response.ok) throw new Error('Could not load the default sample');
+    const text = await response.text();
+    if (signal.aborted) return;
+    clearTimeout(saveTimer); saveTimer = 0;
+    library.reset(); ++openGeneration;
+    current = null;
+    muted.clear(); soloed.clear(); player.muted.clear();
+    ui.volume.value = '0.8'; player.setVolume(0.8);
+    ui.intensity.value = ui.intensity.max;
+    if ($('#bypass').getAttribute('aria-pressed') === 'true') $('#bypass').click();
+    effects.select('eq');
+    loadEditor(text, first, 'Browser scores deleted; sample library restored');
+  }
+});
+addEventListener('pagehide', saveDraft);
+addEventListener('beforeunload', saveDraft);
+document.addEventListener('visibilitychange', () => { if (document.hidden) saveDraft(); });
 
 /* ------------------------------------------------------------ transport and timeline */
 
@@ -388,12 +504,14 @@ function timelineView(st) {
 // only the sound changes; when the change is done, the line is written into the score. If the
 // score has no other edits waiting, that counts as applied; otherwise the music keeps the old score
 // with the new mastering until Ctrl+Enter.
+const effects = createEffectTabs($('.master'));
 const master = createMaster({
   canvas: $('#scope'), list: $('#bands'), add: $('#addBand'), bypass: $('#bypass'), line: $('#eqLine'), note: $('#scopeNote'),
   meters: {
     loud: meterEls('#mLoud'), peak: [meterEls('#mPeakL'), meterEls('#mPeakR')], comp: meterEls('#mComp'), lim: meterEls('#mLim')
   }
 }, {
+  onSelect() { effects.select('eq'); },
   onChange(bands, commit) {
     if (player.syn) player.syn.setMixEq(bands);
     renderChain(bands);
@@ -416,7 +534,7 @@ const dyn = createDynamics($('#dynamics'), {
 });
 ui.masterReset.onclick = () => dyn.reset();
 
-// The chain at the top of the panel: each stage's settings at a glance, and a way to its controls.
+// Each effect tab keeps the stage's current settings visible while its panel is hidden.
 let chainBands = [];
 function renderChain(bands, m) {
   if (bands) chainBands = bands;
@@ -428,19 +546,11 @@ function renderChain(bands, m) {
   set('highpass', hp ? `${hp.f} Hz` + (hp.slope !== 24 ? ` · ${hp.slope} dB` : '') + (hp.q !== 0.707 ? ` · Q ${hp.q}` : '') : 'off', !hp);
   set('eq', chainBands.length ? `${chainBands.length} band${chainBands.length > 1 ? 's' : ''}` : 'neutral');
   set('comp', m.comp ? minus(`${m.comp.threshold} dB · ${m.comp.ratio}:1`) : 'off', !m.comp);
-  set('limit', m.limit ? minus(`${m.limit.threshold} dB`) : 'off', !m.limit);
+  set('limit', m.limit ? minus(`${m.limit.threshold} dB` + (m.limit.makeup ? ` · ${m.limit.makeup > 0 ? '+' : ''}${m.limit.makeup} out` : '')) : 'off', !m.limit);
   ui.masterLine.textContent = formatMaster(m) || 'No master line: the default chain.';
 }
-for (const b of document.querySelectorAll('.chain button')) {
-  b.onclick = () => {
-    const stage = { gain: 'stGain', highpass: 'stHighpass', eq: 'stEq', comp: 'stComp', limit: 'stLimit' }[b.dataset.stage];
-    const el = $('#' + stage);
-    el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
-    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
-    if (b.dataset.stage === 'eq') ($('#bands input') || $('#addBand')).focus({ preventScroll: true });
-    else dyn.focus(b.dataset.stage);
-  };
-}
+
+createFormatGuide($('#format'), $('#formatGuide'));
 
 // Write a mastering change ({ mixEq } or { master }) into the score.
 function writeMastering(change) {
@@ -450,6 +560,7 @@ function writeMastering(change) {
   const what = change.mixEq ? 'Mix eq' : 'Master';
   const onlyMastering = appliedText != null && withoutMasteringLines(before) === withoutMasteringLines(appliedText);
   replaceScore(text);
+  saveDraft();
   if (onlyMastering) {
     const s = compile(text);
     if (!s.errors.length) {
@@ -507,7 +618,7 @@ ui.intensity.oninput = () => {
   player.setIntensity(+ui.intensity.value);
 };
 ui.volume.oninput = () => player.setVolume(+ui.volume.value);
-ui.score.addEventListener('input', markEdited);
+ui.score.addEventListener('input', scheduleSave);
 ui.score.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); apply('Applied edits'); }
 });

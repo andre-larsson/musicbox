@@ -15,7 +15,10 @@ test('the static build has the editor, the library, every score and an index of 
     execFileSync(process.execPath, [join(root, 'bin/build.js'), out], { stdio: 'pipe' });
     const index = JSON.parse(readFileSync(join(out, 'scores/index.json'), 'utf8'));
     assert.deepEqual(index, listScores(root));
-    for (const f of [...index, 'editor/index.html', 'editor/editor.js', 'src/player.js', 'src/random.js', 'docs/PROMPT.md', 'LICENSE', 'NOTICE']) {
+    assert.deepEqual(index, ['scores/demo/brinelight.scrim', 'scores/demo/night-ferry.scrim', 'scores/demo/tide-caves.scrim']);
+    assert.ok(!existsSync(join(out, 'scores/scrimshaw')), 'upstream fixtures are not published');
+    assert.ok(!existsSync(join(out, 'test')), 'tests and their fixtures are not published');
+    for (const f of [...index, 'editor/index.html', 'editor/editor.js', 'editor/effects.js', 'editor/guide.js', 'editor/library.js', 'editor/scorefiles.js', 'src/player.js', 'src/random.js', 'docs/PROMPT.md', 'LICENSE', 'NOTICE']) {
       assert.ok(existsSync(join(out, f)), f);
     }
     assert.match(readFileSync(join(out, 'index.html'), 'utf8'), /url=editor\//);

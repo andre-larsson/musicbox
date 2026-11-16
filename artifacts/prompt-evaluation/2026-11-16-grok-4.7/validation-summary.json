@@ -1,0 +1,63 @@
+[
+  {
+    "name": "waltz",
+    "title": "Glasshouse Waltz",
+    "checks": {
+      "no_errors": true,
+      "no_warnings": true,
+      "no_range_findings": true,
+      "no_random_clashes": true,
+      "loops_at_least_16_bars": true,
+      "requested_meter": true,
+      "requested_key": true,
+      "requested_tempo": true,
+      "requested_instruments": true,
+      "no_layers_or_beds": true,
+      "requested_cues": true,
+      "runtime": true
+    },
+    "harmony_findings": 0,
+    "key_findings": 0
+  },
+  {
+    "name": "adaptive",
+    "title": "The Brass Observatory",
+    "checks": {
+      "no_errors": true,
+      "no_warnings": true,
+      "no_range_findings": true,
+      "no_random_clashes": true,
+      "loops_at_least_16_bars": true,
+      "requested_cues": true,
+      "layers_0_1_2": true,
+      "bed_present": true,
+      "victory_returns": true,
+      "transition_fill": true,
+      "limiter_makeup": true,
+      "runtime": true
+    },
+    "harmony_findings": 0,
+    "key_findings": 0
+  },
+  {
+    "name": "ambient",
+    "title": "Roots in the Archive",
+    "checks": {
+      "no_errors": true,
+      "no_warnings": true,
+      "no_range_findings": true,
+      "no_random_clashes": true,
+      "loops_at_least_16_bars": true,
+      "requested_cues": true,
+      "requested_key": true,
+      "random_pattern_choices": true,
+      "layer_1": true,
+      "random_notes": true,
+      "harp_arpeggiator": true,
+      "beds": true,
+      "runtime": true
+    },
+    "harmony_findings": 0,
+    "key_findings": 0
+  }
+]

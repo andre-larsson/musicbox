@@ -25,7 +25,7 @@ const noSlides = evs => evs.map(({ g, ...e }) => e);
 
 test('Scrimshaw example scores compile exactly as upstream, apart from slide sources', () => {
   for (const [file, h] of Object.entries(UPSTREAM)) {
-    const s = compile(read('scores/scrimshaw/' + file));
+    const s = compile(read('test/fixtures/scrimshaw/' + file));
     assert.deepEqual(s.errors, [], file);
     assert.deepEqual(s.warnings, [], file);
     assert.equal(hash(JSON.stringify({ intro: noSlides(s.intro.events), loop: noSlides(s.loop.events) })), h, file);
@@ -38,7 +38,7 @@ test('a ~ note slides from the note before it in the same voice', () => {
   const slides = s.loop.events.filter(e => e.g != null).map(e => [e.g, e.m[0]]);
   assert.deepEqual(slides, [[38, 45], [40, 43], [43, 38]]);
   // the upstream examples now slide the way they are written: D2 to A2, A2 to D3, E1 to E2
-  const harbor = compile(read('scores/scrimshaw/01-moonlit-harbor.scrim'));
+  const harbor = compile(read('test/fixtures/scrimshaw/01-moonlit-harbor.scrim'));
   assert.deepEqual([...harbor.intro.events, ...harbor.loop.events].filter(e => e.g != null).map(e => [e.g, e.m.at(-1)]),
     [[38, 45], [45, 50], [38, 45], [45, 50], [40, 45], [52, 45]]);
 });

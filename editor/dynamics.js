@@ -27,7 +27,8 @@ export function createDynamics(root, { onChange }) {
       fmt: v => (Math.abs(v - 0.707) < 0.005 ? 'none' : `Q ${v.toFixed(2)}`) },
     compT: { el: $('mCompT'), out: $('mCompTOut'), on: $('mCompOn'), map: lin, def: D.comp.threshold, fmt: v => `${minus(v.toFixed(1))} dB` },
     ratio: { el: $('mRatio'), out: $('mRatioOut'), on: $('mCompOn'), map: log(1, 20), def: D.comp.ratio, fmt: v => `${(Math.round(v * 10) / 10).toFixed(1)}:1` },
-    limitT: { el: $('mLimT'), out: $('mLimTOut'), on: $('mLimOn'), map: lin, def: D.limit.threshold, fmt: v => `${minus(v.toFixed(1))} dB` }
+    limitT: { el: $('mLimT'), out: $('mLimTOut'), on: $('mLimOn'), map: lin, def: D.limit.threshold, fmt: v => `${minus(v.toFixed(1))} dB` },
+    makeup: { el: $('mMakeup'), out: $('mMakeupOut'), on: $('mLimOn'), map: lin, def: D.limit.makeup, fmt: v => `${minus(sg(v.toFixed(1)))} dB` }
   };
   const val = k => ctl[k].map.from(+ctl[k].el.value);
   const put = (k, v) => { ctl[k].el.value = String(ctl[k].map.to(v)); };
@@ -42,7 +43,7 @@ export function createDynamics(root, { onChange }) {
       gain: val('gain'),
       highpass: ctl.hpF.on.checked ? { f: val('hpF'), slope: slope(), q: val('hpQ') } : null,
       comp: ctl.compT.on.checked ? { threshold: val('compT'), ratio: val('ratio') } : null,
-      limit: ctl.limitT.on.checked ? { threshold: val('limitT') } : null
+      limit: ctl.limitT.on.checked ? { threshold: val('limitT'), makeup: val('makeup') } : null
     });
   }
   function show() {
@@ -80,7 +81,8 @@ export function createDynamics(root, { onChange }) {
       if (r.highpass) { put('hpF', r.highpass.f); put('hpQ', r.highpass.q); putSlope(r.highpass.slope); }
       else if (!slopes.some(x => x.checked)) { put('hpF', D.highpass.f); put('hpQ', D.highpass.q); putSlope(D.highpass.slope); }
       ctl.compT.on.checked = !!r.comp; if (r.comp) { put('compT', r.comp.threshold); put('ratio', r.comp.ratio); }
-      ctl.limitT.on.checked = !!r.limit; if (r.limit) put('limitT', r.limit.threshold);
+      ctl.limitT.on.checked = !!r.limit;
+      if (r.limit) { put('limitT', r.limit.threshold); put('makeup', r.limit.makeup); }
       show();
     },
     reset() { this.set(masterDefaults()); emit(true); },

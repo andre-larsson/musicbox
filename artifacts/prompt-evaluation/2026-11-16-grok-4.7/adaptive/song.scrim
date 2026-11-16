@@ -1,0 +1,197 @@
+title    The Brass Observatory
+composer musicbox
+about    A hilltop observatory left to the wind, and the clockwork that still guards the dome. The night watch is complete alone; intensity adds the ticking loft, then the brass.
+tempo    96
+beats    4
+steps    4
+swing    0.1
+reverb   0.42
+key      A minor
+
+bed gale wind vol=0.4 rev=0.55 bright=0.75 swell=10
+
+voice lead  horn    vol=0.92 pan=-0.18 rev=0.32 human=0.75
+voice pad   pad     vol=0.36 pan=0.05  rev=0.5  center=A4 att=0.35 rel=1.8
+voice bass  upright vol=0.88 rev=0.08  human=0.45
+voice keys  vibes   vol=0.42 pan=0.28  rev=0.32 center=E4 gate=0.5 layer=1
+voice hat   hat     vol=0.28 pan=0.42  layer=1 human=0.55
+voice rim   rim     vol=0.32 pan=-0.38 layer=1 human=0.5
+voice kick  kick    vol=0.78 layer=1 human=0.25
+voice snare snare   vol=0.52 pan=-0.06 layer=1 human=0.25
+voice clock celesta vol=0.4  pan=0.5   rev=0.34 center=E5 layer=2 arp=up rate=2 span=1 human=0.3 chance=0.8
+voice brass trumpet vol=0.5  pan=0.14  rev=0.22 center=G4 layer=2
+
+eq lead  highpass=180
+eq pad   highpass=140
+eq kick  peak=75,-5,1.4
+eq clock highpass=280
+eq mix   highshelf=8k,+1.5
+
+master gain=-3 highpass=36 comp=-16,2.6 limit=-3,+1
+
+# Pendulum motif, four-two-two-four-two-two. Em leans back to Am.
+pattern intro
+harmony | Am | Am | Dm | Em |
+lead    | _ | _ | A4:4 F4:2 G4:2 D5:8 | B4:4 G4:2 A4:2 E4:8 |
+pad     | [*]:16 | % | % | % |
+bass    | A2:16 | A2:8 E2:8 | D2:16 | E2:8 B1:8 |
+keys    | _ | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % | % |
+hat     | _ | _ | x... .x.. x... .x.. | % |
+rim     | _ | _ | .... ..x. .... ..x. | % |
+clock   | _ | _ | .:4 A5:4 F5:8 | .:4 B5:4 G5:8 |
+
+pattern A
+harmony | Am | Dm | F | Em |
+lead    | E4:4 C5:2 D5:2 A4:4 C5:2 E4:2 | D5:4 F4:2 G4:2 A4:4 F4:2 D5:2 | C5:4 A4:2 G4:2 F4:4 A4:2 C5:2 | B4:4 G4:2 A4:2 E4:4 G4:2 B4:2 |
+pad     | [*]:16 | % | % | % |
+bass    | A2:6 E2:2 A2:8 | D2:6 A2:2 D2:8 | F2:6 C2:2 F2:8 | E2:6 B1:2 E2:8 |
+keys    | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % | % | % |
+hat     | x... .x.. x... .x.. | % | % | % |
+rim     | .... ..x. .... ..x. | % | % | % |
+clock   | .:4 A5:4 E5:4 C6:4 | .:4 F5:4 A5:4 D5:4 | .:4 A5:4 C6:4 F5:4 | .:4 G5:4 B5:4 E5:4 |
+
+pattern A2
+harmony | C | G | Dm | Em |
+lead    | G4:4 E4:2 F4:2 E4:4 G4:2 C5:2 | B4:4 G4:2 A4:2 B4:4 D5:2 B4:2 | A4:4 F4:2 G4:2 F4:4 A4:2 D5:2 | G4:4 E4:2 F4:2 B4:4 G4:2 B4:2 |
+pad     | [*]:16 | % | % | % |
+bass    | C2:6 G2:2 C2:8 | G2:6 D2:2 G2:8 | D2:6 A2:2 D2:8 | E2:6 B1:2 E2:8 |
+keys    | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % | % | % |
+hat     | x... .x.. x... .x.. | % | % | x.x. ..x. x.x. ..x. |
+rim     | .... ..x. .... ..x. | % | % | % |
+clock   | E5:4 G5:4 C6:4 .:4 | B5:4 G5:4 D5:4 .:4 | A5:4 F5:4 D5:4 .:4 | B5:4 G5:4 E5:4 .:4 |
+
+pattern B
+harmony | Am | F | C | G |
+lead    | C5:4 A4:2 G4:2 E4:4 A4:2 C5:2 | A4:4 F4:2 E4:2 F4:4 A4:2 C5:2 | E4:4 C5:2 D5:2 C5:4 G4:2 E4:2 | D5:4 B4:2 A4:2 G4:4 D5:2 B4:2 |
+pad     | [*]:16 | % | % | % |
+bass    | A2:6 E2:2 A2:8 | F2:6 C2:2 F2:8 | C2:6 G2:2 C2:8 | G2:6 D2:2 G2:8 |
+keys    | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % | % | % |
+hat     | x.x. ..x. x.x. ..x. | % | % | % |
+rim     | .... ..x. .... ..x. | % | % | ..x. ..x. ..x. ..x. |
+clock   | C6:8 A5:4 E5:4 | A5:8 C6:8 | G5:8 E5:4 C6:4 | B5:8 G5:4 D5:4 |
+
+pattern C
+harmony | Dm | Am | F | Em |
+lead    | D5:6 F4:2 A4:8 | E4:4 C5:4 A4:4 E4:4 | C5:4 A4:4 F4:4 C5:2 A4:2 | G4:4 B4:4 E4:8 |
+pad     | [*]:16 | % | % | % |
+bass    | D2:6 A2:2 D2:8 | A2:6 E2:2 A2:8 | F2:6 C2:2 F2:8 | E2:4 B1:4 E2:8 |
+keys    | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % | % | % |
+hat     | x... .x.. x... .x.. | % | % | x... .x.. x... .... |
+rim     | .... ..x. .... ..x. | % | % | .... ..x. .... .... |
+clock   | F5:4 A5:4 D5:8 | E5:8 C6:4 .:4 | A5:4 .:4 C6:4 .:4 | B5:4 G5:4 .:8 |
+
+pattern C2 from C
+lead    | D5:4 F4:2 G4:2 A4:8 | C5:4 A4:4 E4:4 C5:4 | A4:4 C5:4 F4:8 | B4:8 E4:8 |
+clock   | A5:8 D5:4 F5:4 | E5:4 C6:4 A5:4 .:4 | C6:8 A5:8 | G5:4 E5:4 B5:8 |
+
+pattern hit tempo=128 swing=0
+harmony | Em |
+lead    | E4:4 G4:4 B4:4 E4:4 |
+pad     | [*]:16 |
+bass    | E2:4 G2:4 B1:4 E2:4 |
+keys    | .:4 [*]:4 .:4 [*]:4 |
+hat     | x.x. x.x. xxxx XXXX |
+kick    | X.x. X.x. Xx.x XXXX |
+snare   | .... ..x. x.x. XXXX |
+brass   | .:8 [*]:4 [*]!!:4 |
+clock   | B5:4 G5:4 E5:4 B5:4 |
+
+pattern fightin tempo=128 swing=0
+harmony | Am | Em |
+lead    | E4:2 A4:2 C5:2 D5:2 E4:4 .:4 | B4:2 G4:2 E4:2 A4:2 B4:4 .:4 |
+pad     | [*]:16 | % |
+bass    | A2:4 C2:2 E2:2 A2:4 E2:4 | E2:4 E2:2 G2:2 E2:4 B1:4 |
+keys    | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % |
+hat     | x.x. x.x. x.x. x.x. | x.x. x.x. xxxx xxxx |
+kick    | X... .... X... ..x. | X.x. X.x. X.x. XXXX |
+snare   | .... X... .... X... | .... X... x.x. XXXX |
+brass   | .:8 [*]:8 | .:4 [*]!:4 [*]!:8 |
+clock   | [*]:16 | % |
+
+pattern fightA tempo=128 swing=0
+harmony | Am | Am | F | Em |
+lead    | E4:2 C5:2 A4:2 D5:2 E4:2 C5:2 A4:2 E4:2 | C5:2 A4:2 E4:2 D5:2 C5:2 A4:2 E4:2 C5:2 | A4:2 C5:2 F4:2 G4:2 A4:2 C5:2 F4:2 A4:2 | B4:2 G4:2 E4:2 A4:2 B4:2 G4:2 E4:2 B4:2 |
+pad     | [*]:16 | % | % | % |
+bass    | A2:4 C2:2 E2:2 A2:4 E2:2 A2:2 | A2:4 E2:2 A2:2 A2:4 C2:2 A2:2 | F2:4 F2:2 A2:2 F2:4 C2:2 F2:2 | E2:4 E2:2 G2:2 E2:4 B1:2 E2:2 |
+keys    | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % | % | % |
+hat     | x.x. x.x. x.x. x.x. | % | % | % |
+kick    | X... X..x X... X..x | % | % | % |
+snare   | .... X... .... X... | % | % | % |
+brass   | [*]!:4 .:4 [*]:4 .:4 | % | % | % |
+clock   | [*]:16 | % | % | % |
+
+pattern fightB tempo=128 swing=0
+harmony | Dm | Am | C | G |
+lead    | D5:2 A4:2 F4:2 G4:2 A4:2 F4:2 D5:2 A4:2 | E4:2 C5:2 A4:2 B4:2 C5:2 A4:2 E4:2 C5:2 | G4:2 E4:2 C5:2 D5:2 E4:2 C5:2 G4:2 E4:2 | D5:2 B4:2 G4:2 A4:2 B4:2 G4:2 D5:2 B4:2 |
+pad     | [*]:16 | % | % | % |
+bass    | D2:4 D2:2 F2:2 D2:4 A2:2 D2:2 | A2:4 C2:2 E2:2 A2:4 E2:2 A2:2 | C2:4 C2:2 E2:2 C2:4 G2:2 C2:2 | G2:4 G2:2 B2:2 G2:4 D2:2 G2:2 |
+keys    | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % | % | % |
+hat     | x.x. x.x. x.x. x.x. | % | % | % |
+kick    | X... X..x X... X..x | % | % | % |
+snare   | .... X... .... X... | % | % | % |
+brass   | [*]!:4 .:4 [*]:4 .:4 | % | % | % |
+clock   | [*]:16 | % | % | % |
+
+pattern fightC tempo=128 swing=0
+harmony | Am | F | C | G |
+lead    | A4:2 E4:2 C5:2 D5:2 E4:2 C5:2 A4:2 E4:2 | C5:2 A4:2 F4:2 G4:2 A4:2 F4:2 C5:2 A4:2 | E4:2 G4:2 C5:2 D5:2 E4:2 C5:2 G4:2 E4:2 | B4:2 D5:2 G4:2 A4:2 D5:2 B4:2 G4:2 D5:2 |
+pad     | [*]:16 | % | % | % |
+bass    | A2:4 C2:2 E2:2 A2:4 E2:2 A2:2 | F2:4 F2:2 A2:2 F2:4 C2:2 F2:2 | C2:4 C2:2 E2:2 C2:4 G2:2 C2:2 | G2:4 G2:2 B2:2 G2:4 D2:2 G2:2 |
+keys    | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % | % | % |
+hat     | x.x. x.x. x.x. x.x. | % | % | % |
+kick    | X... X..x X... X..x | % | % | % |
+snare   | .... X... .... X... | % | % | % |
+brass   | [*]!:4 .:4 [*]:4 .:4 | % | % | % |
+clock   | [*]:16 | % | % | % |
+
+pattern fightD tempo=128 swing=0
+harmony | Dm | F | G | Em |
+lead    | D5:2 F4:2 A4:2 E4:2 F4:2 A4:2 D5:2 F4:2 | A4:2 F4:2 C5:2 D5:2 C5:2 A4:2 F4:2 C5:2 | G4:2 B4:2 D5:2 A4:2 B4:2 G4:2 D5:2 B4:2 | E4:2 B4:2 G4:2 A4:2 B4:2 G4:2 E4:2 .:2 |
+pad     | [*]:16 | % | % | % |
+bass    | D2:4 D2:2 F2:2 D2:4 A2:2 D2:2 | F2:4 F2:2 A2:2 F2:4 C2:2 F2:2 | G2:4 G2:2 B2:2 G2:4 D2:2 G2:2 | E2:4 E2:2 G2:2 E2:4 B1:4 |
+keys    | .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 .:2 [*]:2 | % | % | % |
+hat     | x.x. x.x. x.x. x.x. | % | % | x.x. x.x. xxxx XXXX |
+kick    | X... X..x X... X..x | % | % | X.x. X.x. XxXx XXXX |
+snare   | .... X... .... X... | % | % | .... X... x.x. XXXX |
+brass   | [*]!:4 .:4 [*]:4 .:4 | % | [*]!:2 .:2 [*]:2 .:2 [*]!:4 .:4 | [*]!:8 .:8 |
+clock   | [*]:16 | % | % | % |
+
+pattern sting tempo=96 swing=0
+harmony | Am |
+lead    | E4:16 |
+pad     | [*]:16 |
+bass    | A2:16 |
+brass   | [*]:16 |
+clock   | A5:16 |
+
+pattern fanfare tempo=96 swing=0
+harmony | Am | F | C | Em |
+lead    | E4:4 C5:4 A4:4 E4:4 | A4:4 C5:4 F4:4 A4:4 | E4:4 G4:4 C5:4 E4:4 | B4:4 G4:4 E4:8 |
+pad     | [*]:16 | % | % | % |
+bass    | A2:8 E2:8 | F2:8 C2:8 | C2:8 G2:8 | E2:8 B1:8 |
+keys    | [*]:4 .:4 [*]:4 .:4 | % | % | [*]:8 .:8 |
+hat     | x.x. x... x.x. x... | % | x.x. x.x. x.x. xxxx | x... .... .... .... |
+kick    | X... .... X... .... | X... .... X... ..x. | X... .... X... X... | X... .... .... .... |
+snare   | .... X... .... X... | % | .... X... .... xXxX | .... .... .... x... |
+brass   | [*]!:4 .:4 [*]:4 .:4 | [*]:4 .:4 [*]:8 | [*]:4 [*]:4 [*]:8 | [*]:8 .:8 |
+clock   | E5:4 A5:4 C6:4 E5:4 | A5:4 C6:4 F5:4 A5:4 | E5:4 G5:4 C6:4 E5:4 | B5:4 G5:4 E5:8 |
+
+cue explore
+beds gale=0.6
+play intro
+loop A A2 B {C C2}
+
+cue combat
+beds gale=0.22
+play fightin
+loop fightA fightB fightC fightD
+
+cue victory
+beds gale=0.4
+play fanfare
+then explore
+
+switch explore -> combat at bar via hit fade 0.4
+switch combat -> explore at pattern fade 2
+switch * -> victory at beat via sting fade 0.8
+switch victory -> explore at bar fade 2

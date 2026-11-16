@@ -921,6 +921,7 @@ function createSynth(ctx, dest, opts = {}) {
   const out = G(S, 1);
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = -3; limiter.knee.value = 0; limiter.ratio.value = 20; limiter.attack.value = 0.001; limiter.release.value = 0.1;
+  const limitMakeup = G(S, 1); // musicbox: manual gain after limiting; unity for all existing scores
   // musicbox: the score's master line: the level into the chain, the high pass filter, the
   // compressor and the limiter. Off is a transparent setting (0 dB shelves, a 1:1 ratio) rather than
   // a rewire, so an editor can change the master while the music plays without a click.
@@ -938,11 +939,12 @@ function createSynth(ctx, dest, opts = {}) {
     });
     glide(comp.threshold, d.comp ? d.comp.threshold : 0); glide(comp.ratio, d.comp ? d.comp.ratio : 1);
     glide(limiter.threshold, d.limit ? d.limit.threshold : 0); glide(limiter.ratio, d.limit ? 20 : 1);
+    glide(limitMakeup.gain, Math.pow(10, (d.limit?.makeup || 0) / 20)); // musicbox: bypassed with the limiter
   };
   if (opts.raw) {
     // measurement chain: rough K-weighting, no compression
     master.connect(F(S, 'highpass', 60, .7)).connect(F(S, 'highshelf', 1500, .7, 4)).connect(out).connect(dest);
-  } else { master.connect(hpf[0]); hpf[hpf.length - 1].connect(mixIn); mixOut.connect(comp).connect(limiter).connect(out).connect(dest); }
+  } else { master.connect(hpf[0]); hpf[hpf.length - 1].connect(mixIn); mixOut.connect(comp).connect(limiter).connect(limitMakeup).connect(out).connect(dest); }
   setMaster(); // musicbox: the default chain until a session sets the score's
   const analyser = ctx.createAnalyser(); analyser.fftSize = 1024; out.connect(analyser);
 
@@ -952,7 +954,7 @@ function createSynth(ctx, dest, opts = {}) {
   verbIn.connect(verb).connect(verbRet).connect(master);
 
   return {
-    S, master, out, analyser, verbRet, comp, limiter, // musicbox: comp and limiter, for meters
+    S, master, out, analyser, verbRet, comp, limiter, limitMakeup, // musicbox: dynamics and post-limiter meter tap
     // musicbox: for editors: change the mix eq now (the next session sets its score's eq again),
     // or listen without it
     setMixEq, setMaster,

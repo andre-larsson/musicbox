@@ -1,0 +1,15 @@
+"Glasshouse Waltz" · 3 beats × 2 steps (6 per bar) · 84 bpm · key C major
+
+Cues
+  main (default)  loop A B (16 bars, 34.3 s)
+
+Voices
+  melody  clarinet  E4–A5     63 notes  (human 0.5)
+  piano   piano     B3–A4     24 notes  (human 0.35)
+  bass    upright   C2–B2     40 notes  (human 0.4)
+
+Patterns
+  A   8 bars  voices: melody piano bass
+     harmony: | C | Am | F | G | C | F | Dm | G7 |
+  B   8 bars  voices: melody piano bass
+     harmony: | C | Em | Am | F | Dm | G | Am | G |

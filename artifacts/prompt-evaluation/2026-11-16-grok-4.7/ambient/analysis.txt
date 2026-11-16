@@ -1,0 +1,50 @@
+"Roots in the Archive" · 4 beats × 2 steps (8 per bar) · 60 bpm · key D dorian
+Mix eq: highshelf 9 kHz +1.5 dB
+Master: gain -5 dB, high pass 32 Hz 24 dB/oct, compressor -20 dB 2.2:1, limiter -3 dB
+
+Cues
+  quiet (default)  play hush (4 bars, 16.0 s) → loop fern vault {drip loam} fern vault {drip loam} (24 bars, 96.0 s)
+  alert            play stir (4 bars, 16.0 s) → loop glass lamp {spore vein} glass lamp {spore vein} (24 bars, 96.0 s)
+
+Switches
+  quiet -> alert  at bar via veil (1 bar) fade 4
+  alert -> quiet  at bar via veil (1 bar) fade 4
+
+Beds (continuous; they keep going across cue switches)
+  rain  rain  vol 0.38  in every cue
+  hum   drone D2  vol 0.28  in every cue
+
+Layers (intensity N plays layers 0 to N)
+  0: pad harp pluck root rain hum
+  1: breath
+
+Voices
+  pad     pad       layer 0  B3–A4     122 notes
+  harp    harp      layer 0  A3–A4     488 notes  (arp updown, every 2 steps)
+  pluck   celesta   layer 0  C5–E6     109 notes  (chance 0.55, jitter 0.16 s)
+  root    fretless  layer 0  C2–A2     151 notes  (human 0.45)
+  breath  flute     layer 1  G4–F5     173 notes  (chance 0.8, human 0.6)
+
+Patterns
+  hush    4 bars  voices: pad harp root pluck breath
+         harmony: | Dm7 | Dm7 | Fmaj7 | Dm9 |
+  fern    4 bars  voices: pad harp root pluck breath
+         harmony: | Dm9 | Cmaj7 | Dm7 | Gsus2 |
+  vault   4 bars  voices: pad harp root pluck breath
+         harmony: | Fmaj7 | Em7 | Am7 | Dm7 |
+  drip    4 bars  voices: pad harp root pluck breath
+         harmony: | Cmaj7 | Am7 | Gsus2 | Dm7 |
+  loam    4 bars  voices: pad harp root pluck breath
+         harmony: | Am7 | Fmaj7 | Em7 | Dm9 |
+  stir    4 bars  voices: pad harp root pluck breath
+         harmony: | Dm7 | Fmaj7 | Am7 | Dm7 |
+  glass   4 bars  voices: pad harp root pluck breath
+         harmony: | Dm9 | Em7 | Fmaj7 | Cmaj7 |
+  lamp    4 bars  voices: pad harp root pluck breath
+         harmony: | Am7 | Gsus2 | Dm7 | Dm7 |
+  spore   4 bars  voices: pad harp root pluck breath
+         harmony: | Fmaj7 | Dm9 | Cmaj7 | Gsus2 |
+  vein    4 bars  voices: pad harp root pluck breath
+         harmony: | Em7 | Fmaj7 | Am7 | Dm9 |
+  veil    1 bar   voices: pad harp root pluck breath
+         harmony: | Dm7 |

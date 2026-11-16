@@ -236,9 +236,15 @@ test('the demo scores compile cleanly and play', () => {
     player.load(text);
     player.play();
     runTo(30);
-    player.goto(s.cueOrder[1]);
-    runTo(60);
+    let time = 30;
+    for (const [i, cue] of s.cueOrder.slice(1).entries()) {
+      const before = played.length;
+      player.setIntensity(i % 3);
+      player.goto(cue);
+      runTo(time += 30);
+      assert.equal(player.state.cue, cue, `${f}: switch to ${cue}`);
+      assert.ok(played.length > before, `${f}: ${cue} schedules notes`);
+    }
     assert.ok(played.length > 50, f);
-    assert.equal(player.state.cue, s.cueOrder[1]);
   }
 });

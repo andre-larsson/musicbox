@@ -1,61 +1,457 @@
-title  Brinelight
-about  A port of Brinelight's generative score: a swelling pad and random plucks over the sea, in four moods. The plucks are rolled fresh every bar, as in the game.
-# Brinelight, the game: https://andre-larsson.github.io/brinelight/
-tempo  57        # a 4-beat bar lasts 4.2 s, like the game's calm mood
-beats  4
-steps  3         # 12 steps a bar, so 2, 3 and 4 plucks a bar all land on steps
-reverb 0.45
-key    A minor
+title    Brinelight
+about    Wren's music: a keeper's song over the sea that darkens the deeper she goes. Intensity is the depth: 0 the Shallows, 1 Dark Water (a far bell and a low drone), 2 the Belfry (a choir).
+tempo    66
+beats    3
+steps    2        # 3/4 in eighth notes, 6 steps a bar. The fights are in 6/8, also 6 steps a bar
+reverb   0.45
+key      A minor
 
-# The game plays each mood as: a pad chord and a bass note that swell and fade every bar,
-# a few plucks a bar (each sounds 70% of the time, on a random note from a set, up to
-# 0.2 s late), and in fights a low thump. Brown noise with a slow swell runs underneath.
-bed   sea    sea       vol=0.8
-voice pad    triangle  vol=0.55 center=C4 att=1.3 gate=0.35 rel=3.5 bright=0.15 rev=0.4
-voice bass   triangle  vol=0.6  att=1.3 gate=0.35 rel=3.5 bright=0.15
-voice pluck  sine      vol=0.55 att=0.01 gate=0.08 rel=1.5 chance=0.7 jitter=0.2 rev=0.5 pan=0.15
-voice thump  kick      vol=0.5
+# Cues and the screens that play them:
+#   title   the title screen, the opening pictures, the Workshop and Story so far
+#   reach   the map, rewards, rests, Barnaby's, Fog events, treasure, a broken pin
+#   fight   an ordinary fight          dread   a Dread (elite)
+#   pin     a pin (boss)               pin2    a pin's second phase
+#   buoy    the Tolling Buoy, Dark Water's pin, for the whole fight
+#   home    the Lantern Heart rises    fallen  the tide takes you
+# Intensity = depth: setIntensity(0) in the Shallows, 1 in Dark Water, 2 in the Belfry.
+# Layer 1 adds the far bell (toll) and the drone bed; layer 2 adds the choir.
 
-pattern calm
-harmony | Am | F | C/E | G |
-pad     | [*]:12 | % | % | % |
-bass    | A2:12 | F2:12 | E2:12 | G2:12 |
-pluck   | {A4 C5 D5 E5 G5 A5}:6 {A4 C5 D5 E5 G5 A5}:6 | % | % | % |
+bed   sea     sea       vol=0.7  swell=9
+bed   wind    wind      vol=0.22 pan=-0.3
+bed   deep    drone     vol=0.32 note=A1 layer=1
 
-pattern fight tempo=86
-harmony | Am | G | F | E |
-pad     | [*]:12 | % | % | % |
-bass    | A2:12 | G2:12 | F2:12 | E2:12 |
-pluck   | {A4 C5 D5 E5 G5}:4 {A4 C5 D5 E5 G5}:4 {A4 C5 D5 E5 G5}:4 | % | % | % |
-thump   | x..... x..... | % | % | % |
+# the keeper's song. Pans spread the parts so ones in the same range don't sit on top of each
+# other: flute left and clarinet right, harp right and lyre left, the celesta wide right
+voice flute   flute     vol=0.85 pan=-0.25 rev=0.45
+voice clar    clarinet  vol=0.7  pan=0.3   rev=0.4
+voice harp    harp      vol=0.45 pan=0.4   center=A3 arp=updown span=2 rev=0.4
+voice lyre    harp      vol=0.42 pan=-0.4  center=A3 arp=updown rate=2 span=2 chance=0.85 jitter=0.04 rev=0.5
+voice pad     strings   vol=0.3  pan=-0.1  center=C4 att=1.2 rel=2.5   # low enough to fill the gap above the bass
+voice bass    fretless  vol=0.62
+voice pluck   celesta   vol=0.32 pan=0.45  center=A5 chance=0.6 jitter=0.15 rev=0.6
+# the deep: these join every cue once the depth reaches them
+voice toll    bell      vol=0.38 pan=-0.5  rev=0.7 layer=1
+voice choir   choir     vol=0.26 center=A3 att=1.5 rel=3 layer=2
+# fights: fiddle left and pizzicato right; the low drums stay near the middle
+voice pizz    pizz      vol=0.55 pan=0.4
+voice fiddle  fiddle    vol=0.68 pan=-0.35 rev=0.3
+voice horn    horn      vol=0.42 pan=0.25  center=D4 att=0.3
+voice bodhran bodhran   vol=0.55 pan=-0.2
+voice tom     tomlo     vol=0.5  pan=0.25
+voice timp    timpani   vol=0.6
+voice knell   bell      vol=0.5  pan=-0.15 rev=0.6
+voice gong    gong      vol=0.4  pan=0.2
+voice brass   brass     vol=0.45 pan=0.1   center=F4 gate=0.7
+# the Tolling Buoy: its iron bell near the middle (the far toll is the great bell it answers), the
+# singer in its cage left, away from the horn, and a wave that breaks on the right
+voice iron    bell      vol=0.55 pan=0.1   rev=0.5
+voice singer  choir     vol=0.42 pan=-0.25 att=0.4 rel=1.8 glide=0.25 rev=0.55
+voice breaker surf      vol=0.45 pan=0.35
 
-pattern boss tempo=92
+# eq: a cut at the pitch of each low drum, where it would boom on top of the bass, and a little
+# air on the whole mix
+eq mix     highshelf=8k,+2
+eq bodhran peak=80,-6,1.4
+eq tom     peak=95,-6,1.4
+eq timp    peak=75,-4,1.5      # the timpani doubles the bass's D2 in the pins
+
+# ============================================================= title: the keeper's song
+pattern t_in
+harmony | Am | Fmaj7 | Dm7 | E7 |
+harp    | [*]:6 | % | % | % |
+pad     | [*]?:6 | % | % | % |
+bass    | A1:6 | F1:6 | D2:6 | E2:6 |
+
+pattern theme_a
+harmony | Am | C | G | Em | F | Dm | E7 | Am |
+flute   | A4:3 B4 C5:2 | E5:4 D5:2 | D5:2 C5:2 B4:2 | B4:6 |
+flute   | A4:3 B4 C5:2 | F5:4 E5:2 | D5:2 C5:2 B4:2 | A4:4 E4:2 |
+harp    | [*]:6 | % | % | % | % | % | % | % |
+pad     | [*]?:6 | % | % | % | % | % | % | % |
+bass    | A1:4 E2:2 | C2:4 G2:2 | G1:4 D2:2 | E2:4 B1:2 |
+bass    | F1:4 C2:2 | D2:4 A1:2 | E2:4 B1:2 | A1:4 E2:2 |
+
+pattern theme_b
+harmony | F | G | Am | Em | F | C/E | Dm | E7 |
+flute   | C5:2 F5:2 A5:2 | G5:4 F5:2 | E5:2 C5:2 A4:2 | B4:4 G4:2 |
+flute   | A4:2 C5:2 F5:2 | E5:4 G5:2 | F5:2 E5:2 D5:2 | B4:4 G#4:2 |
+clar    | A3:6 | B3:6 | C4:6 | B3:6 | A3:6 | G3:6 | F3:6 | G#3:6 |
+harp    | [*]:6 | % | % | % | % | % | % | % |
+pad     | [*]?:6 | % | % | % | % | % | % | % |
+bass    | F1:4 C2:2 | G1:4 D2:2 | A1:4 E2:2 | E2:4 B1:2 |
+bass    | F1:4 C2:2 | E2:4 C2:2 | D2:4 A1:2 | E2:4 G#1:2 |
+
+# the song again, low on the clarinet, with sparser harp
+pattern theme_a2 from theme_a
+mute    flute
+mute    harp
+clar    | A3:3 B3 C4:2 | E4:4 D4:2 | D4:2 C4:2 B3:2 | B3:6 |
+clar    | A3:3 B3 C4:2 | F4:4 E4:2 | D4:2 C4:2 B3:2 | A3:4 E3:2 |
+lyre    | [*]:6 | % | % | % | % | % | % | % |
+pluck   | .:2 {chord}:4 | .:6 | .:2 {chord}:4 | .:6 | .:2 {chord}:4 | .:6 | .:2 {chord}:4 | .:6 |
+
+pattern interlude
+harmony | Fmaj7 | G | Am | E7 |
+lyre    | [*]:6 | % | % | % |
+pad     | [*]?:6 | % | % | % |
+bass    | F1:6 | G1:6 | A1:6 | E2:6 |
+pluck   | {chord}:2 .:2 {chord}:2 | % | % | % |
+
+# ============================================================= reach: the map and the quiet screens
+# a breath after a fight, leading into the A minor of r1
+pattern r_in
+harmony | Fmaj7 | Esus4 E |
+pad     | [*]?:6 | % |
+bass    | F1:6 | E2:6 |
+pluck   | .:2 {A5 C6 E6}:4 | .:6 |
+
+pattern r1
+harmony | Am | % | Fmaj7 | % | C | % | G | Esus4 E |
+lyre    | [*]:6 | % | % | % | % | % | % | % |
+pad     | [*]?:6 | % | % | % | % | % | % | % |
+bass    | A1:6 | = | F1:6 | = | C2:6 | = | G1:6 | E2:6 |
+pluck   | {A5 C6 D6 E6 G5}:2 .:2 {A5 C6 D6 E6 G5}:2 | .:6 | {A5 C6 E6 G5}:2 .:2 {A5 C6 E6 G5}:2 | .:6 |
+pluck   | {C6 D6 E6 G5}:2 .:2 {C6 D6 E6 G5}:2 | .:6 | {chord}:2 .:2 {chord}:2 | .:6 |
+toll    | A3:6 | _ | _ | _ | C4:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
+
+# Wren hums the first line of the song
+pattern r2 from r1
+mute    pluck
+flute   | A4?:3 B4? C5?:2 | E5?:4 D5?:2 | C5?:6 | .:6 |
+flute   | E4?:3 G4? C5?:2 | E5?:4 D5?:2 | D5?:2 C5?:2 B4?:2 | B4?:6 |
+
+pattern r3
+harmony | Dm7 | % | Am | % | Fmaj7 | % | Em7 | E7 |
+lyre    | [*]:6 | % | % | % | % | % | % | % |
+pad     | [*]?:6 | % | % | % | % | % | % | % |
+bass    | D2:6 | = | A1:6 | = | F1:6 | = | E2:6 | = |
+pluck   | {D6 E6 F5 A5 C6}:2 .:4 | .:2 {D6 E6 F5 A5 C6}:4 | {A5 C6 D6 E6 G5}:2 .:4 | .:6 |
+pluck   | {A5 C6 E6 G5}:2 .:4 | .:2 {A5 C6 E6 G5}:4 | {E6 G5 B5 D6}:2 .:4 | .:2 {chord}:4 |
+toll    | D4:6 | _ | _ | _ | A3:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
+
+# r3 with a low clarinet line
+pattern r3c from r3
+clar    | A3?:3 C4? D4?:2 | F4?:4 E4?:2 | E4?:6 | .:6 |
+clar    | C4?:3 D4? E4?:2 | A4?:4 G4?:2 | E4?:2 D4?:2 B3?:2 | B3?:6 |
+
+# almost nothing: the sea, a chord, a glint
+pattern r4
+harmony | Fmaj7 | % | Am | Esus4 E |
+pad     | [*]?:6 | % | % | % |
+bass    | F1:6 | = | A1:6 | E2:6 |
+pluck   | .:2 {A5 C6 E6 G5}:4 | .:6 | {A5 C6 E6}:6 | .:6 |
+toll    | _ | _ | A3:6 | _ |
+choir   | [*]?:6 | % | % | % |
+
+# ============================================================= fights: 6/8 in D minor
+# the waves under a fight: rolling pizzicato, bass and bodhran
+pattern f1 tempo=80 beats=2 steps=3
 key     D minor
-harmony | Dm | C#dim | Bb | A |
-pad     | [*]:12 | % | % | % |
-bass    | D2:12 | C#2:12 | Bb1:12 | A1:12 |
-pluck   | {D4 F4 G4 A4 C5}:6 {D4 F4 G4 A4 C5}:6 | % | % | % |
-thump   | x..... x..... | % | % | % |
+harmony | Dm | % | Bb | C | Dm | % | Gm | A7 |
+pizz    | D3 A3 D4 A3 F3 A3 | % | Bb2 F3 Bb3 F3 D3 F3 | C3 G3 C4 G3 E3 G3 |
+pizz    | D3 A3 D4 A3 F3 A3 | % | G2 D3 G3 D3 Bb2 D3 | A2 E3 A3 E3 C#3 E3 |
+bass    | D2:6 | D2:3 A1:3 | Bb1:6 | C2:6 | D2:6 | D2:3 A1:3 | G1:6 | A1:6 |
+bodhran | X.o x.o | % | % | % | % | % | % | X.x xxx |
+toll    | A3:6 | _ | _ | _ | A3:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
 
-pattern boss2 tempo=120
+# the fight tune: the song's rising A B C E, as D E F A
+pattern f2 from f1
+fiddle  | D5:2 E5 F5:2 A5 | A5:3 G5:2 F5 | F5:2 D5 Bb4:3 | C5:2 E5 G5:3 |
+fiddle  | D5:2 E5 F5:2 A5 | D6:3 C6:2 A5 | Bb5:2 A5 G5:2 D5 | E5:3 C#5:3 |
+pad     | [*]?:6 | % | % | % | % | % | % | % |
+
+pattern f3 tempo=80 beats=2 steps=3
 key     D minor
-harmony | Dm | Bb | C | A |
-pad     | [*]:12 | % | % | % |
-bass    | D2:12 | Bb1:12 | C2:12 | A1:12 |
-pluck   | {D4 F4 G4 A4 C5 D5}:3 {D4 F4 G4 A4 C5 D5}:3 {D4 F4 G4 A4 C5 D5}:3 {D4 F4 G4 A4 C5 D5}:3 | % | % | % |
-thump   | x.. x.. x.. x.. | % | % | % |
+harmony | Bb | C | Dm | % | Bb | C | A7sus4 | A7 |
+pizz    | Bb2 F3 Bb3 F3 D3 F3 | C3 G3 C4 G3 E3 G3 | D3 A3 D4 A3 F3 A3 | % |
+pizz    | Bb2 F3 Bb3 F3 D3 F3 | C3 G3 C4 G3 E3 G3 | A2 E3 A3 E3 D3 E3 | A2 E3 A3 E3 C#3 E3 |
+bass    | Bb1:6 | C2:6 | D2:6 | D2:3 A1:3 | Bb1:6 | C2:6 | A1:6 | = |
+horn    | D4:6 | E4:6 | F4:6 | A4:6 | F4:6 | G4:6 | D4:6 | C#4:6 |
+pad     | [*]?:6 | % | % | % | % | % | % | % |
+bodhran | X.o x.o | % | % | % | % | % | % | X.x xxx |
+tom     | X..... | _ | X..... | _ | X..... | _ | X..x.. | X.xX.x |
+toll    | D4:6 | _ | A3:6 | _ | D4:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
 
-cue calm
-loop calm
+# a lull: no drums to speak of
+pattern f4 tempo=80 beats=2 steps=3
+key     D minor
+harmony | Gm | Dm | Bb | A7 |
+pizz    | G2 . D3 . G3 . | D3 . A3 . D4 . | Bb2 . F3 . Bb3 . | A2 . E3 . C#3 . |
+bass    | G1:6 | D2:6 | Bb1:6 | A1:6 |
+pad     | [*]:6 | % | % | % |
+bodhran | o..o.. | % | % | o.o xXx |
+toll    | D4:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % |
+
+# a Dread: the flat second (Eb) over D, timpani and horns
+pattern d1 tempo=80 beats=2 steps=3
+key     D minor
+harmony | Dm | Eb | Dm | Eb | Gm | Bb | Gm | A7 |
+pizz    | D3 A3 D4 A3 F3 A3 | Eb3 Bb3 Eb4 Bb3 G3 Bb3 | D3 A3 D4 A3 F3 A3 | Eb3 Bb3 Eb4 Bb3 G3 Bb3 |
+pizz    | G2 D3 G3 D3 Bb2 D3 | Bb2 F3 Bb3 F3 D3 F3 | G2 D3 G3 D3 Bb2 D3 | A2 E3 A3 E3 C#3 E3 |
+bass    | D2:6 | Eb2:6 | D2:6 | Eb2:6 | G1:6 | Bb1:6 | G1:6 | A1:6 |
+horn    | [*]:6 | % | % | % | % | % | % | % |
+timp    | D2!:6 | Eb2:6 | D2!:6 | Eb2:6 | G2!:6 | F2:6 | G2!:6 | A2! A2 A2 A2! A2! A2!! |
+bodhran | X.o x.o | % | % | % | % | % | % | X.x xxx |
+tom     | X..x.. | % | % | % | % | % | % | X.xX.x |
+toll    | A3:6 | _ | _ | _ | D4:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
+
+pattern d2 from d1
+fiddle  | D5:2 E5 F5:3 | Eb5:3 G5:2 Bb5 | A5:3 F5:2 D5 | Eb5:3 Bb4:3 |
+fiddle  | D5:2 G5 Bb5:3 | Bb5:2 F5 D5:3 | Bb5:2 A5 G5:2 D5 | C#5:2 E5 A5:3 |
+
+# ============================================================= pins: the bell
+pattern p1 tempo=72 beats=2 steps=3
+key     D minor
+harmony | Dm | Eb | Dm | C#dim | Dm | Bb | Gm | A |
+knell   | D4:6 | _ | D4:6 | _ | D4:6 | _ | D4:6 | C#4:6 |
+pizz    | D3 A2 D3 E3 F3 E3 | Eb3 Bb2 Eb3 F3 G3 F3 | D3 A2 D3 E3 F3 E3 | C#3 G2 C#3 E3 G3 E3 |
+pizz    | D3 A2 D3 E3 F3 E3 | Bb2 F2 Bb2 C3 D3 C3 | G2 D2 G2 A2 Bb2 A2 | A2 E2 A2 C#3 E3 C#3 |
+bass    | D2:6 | Eb2:6 | D2:6 | C#2:6 | D2:6 | Bb1:6 | G1:6 | A1:6 |
+timp    | D2!:4 D2 D2 | Eb2!:6 | D2!:4 D2 D2 | E2!:6 | D2!:4 D2 D2 | F2:6 | G2!:6 | A2! A2 A2 A2! A2! A2!! |
+horn    | [*]:6 | % | % | % | % | % | % | % |
+bodhran | X..x.. | % | % | % | % | % | % | X.xX.x |
+gong    | X..... | _ | _ | _ | _ | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
+
+pattern p2 from p1
+fiddle  | A4:3 D5:3 | Bb4:3 G4:3 | A4:2 F4 D4:3 | E4:3 G4:3 |
+fiddle  | A4:3 D5:2 E5 | F5:3 D5:3 | G5:2 F5 D5:2 Bb4 | A4:6 |
+
+# the second phase: the fight tune, faster, with brass
+pattern q1 tempo=96 beats=2 steps=3
+key     D minor
+harmony | Dm | % | Bb | C | Dm | % | Gm | A7 |
+pizz    | D3 A3 D4 A3 F3 A3 | % | Bb2 F3 Bb3 F3 D3 F3 | C3 G3 C4 G3 E3 G3 |
+pizz    | D3 A3 D4 A3 F3 A3 | % | G2 D3 G3 D3 Bb2 D3 | A2 E3 A3 E3 C#3 E3 |
+bass    | D2:3 D2:3 | D2:3 A1:3 | Bb1:3 Bb1:3 | C2:3 C2:3 | D2:3 D2:3 | D2:3 A1:3 | G1:3 G1:3 | A1:3 C#2:3 |
+fiddle  | D5:2 E5 F5:2 A5 | A5:3 G5:2 F5 | F5:2 D5 Bb4:3 | C5:2 E5 G5:3 |
+fiddle  | D5:2 E5 F5:2 A5 | D6:3 C6:2 A5 | Bb5:2 A5 G5:2 D5 | E5:3 C#5:3 |
+brass   | [*]!:2 . [*]:3 | % | % | % | % | % | % | [*]!:2 . [*]!:3 |
+knell   | D4:6 | _ | _ | _ | D4:6 | _ | _ | _ |
+timp    | D2!:3 A2:3 | % | F2!:3 Bb2:3 | G2!:3 C3:3 | D2!:3 A2:3 | % | G2!:3 D3:3 | A2! A2 A2 A2! A2! A2!! |
+bodhran | X.xX.x | % | % | % | % | % | % | XxxXXX |
+tom     | X..X.. | % | % | % | % | % | % | XxXxXX |
+gong    | X..... | _ | _ | _ | X..... | _ | _ | _ |
+choir   | [*]:6 | % | % | % | % | % | % | % |
+
+# the keeper's song in D minor, in octaves on fiddle and horn
+pattern q2 tempo=96 beats=2 steps=3
+key     D minor
+harmony | Dm | F | C | Am | Bb | Gm | A7 | Dm |
+fiddle  | D5:3 E5 F5:2 | A5:4 G5:2 | G5:2 F5:2 E5:2 | E5:6 |
+fiddle  | D5:3 E5 F5:2 | Bb5:4 A5:2 | G5:2 F5:2 E5:2 | D5:4 A4:2 |
+horn    | D4:3 E4 F4:2 | A4:4 G4:2 | G4:2 F4:2 E4:2 | E4:6 |
+horn    | D4:3 E4 F4:2 | Bb4:4 A4:2 | G4:2 F4:2 E4:2 | D4:4 A3:2 |
+pizz    | D3 A3 D4 A3 F3 A3 | F2 C3 F3 C3 A2 C3 | C3 G3 C4 G3 E3 G3 | A2 E3 A3 E3 C3 E3 |
+pizz    | Bb2 F3 Bb3 F3 D3 F3 | G2 D3 G3 D3 Bb2 D3 | A2 E3 A3 E3 C#3 G3 | D3 A3 D4 A3 F3 A3 |
+bass    | D2:3 D2:3 | F1:3 F1:3 | C2:3 C2:3 | A1:3 A1:3 | Bb1:3 Bb1:3 | G1:3 G1:3 | A1:3 C#2:3 | D2:3 A1:3 |
+brass   | [*]!:2 . [*]:3 | % | % | % | % | % | % | [*]!:6 |
+knell   | D4:6 | _ | _ | _ | D4:6 | _ | _ | _ |
+timp    | D2!:3 A2:3 | F2!:3 C3:3 | G2!:3 C3:3 | A2!:3 E2:3 | Bb2!:3 F2:3 | G2!:3 D3:3 | A2! A2 A2 A2! A2! A2!! | D2!!:6 |
+bodhran | X.xX.x | % | % | % | % | % | % | XxxXXX |
+tom     | X..X.. | % | % | % | % | % | % | XxXxXX |
+gong    | X..... | _ | _ | _ | X..... | _ | _ | _ |
+choir   | [*]:6 | % | % | % | % | % | % | % |
+
+# ============================================================= the Tolling Buoy: Dark Water's pin
+# 6/8 at 52 in A minor, rocking on a swell over a low A. The iron bell strikes on the swing, with the
+# great bell (toll) when the depth brings it in. The singer in the cage sings the bell's own notes
+# (A, C and E) and the sigh from E up to F. Each pass the chain slips (the bass falls by half steps
+# under the bell's A) into the Wild Peal, and a breaking wave smothers it.
+pattern bu_in tempo=52 beats=2 steps=3
+harmony | Am | % | F/A | Esus4 E |
+bass    | A1:6 | = | A1:6 | E2:4 B1:2 |
+pad     | [*]?:6 | % | % | % |
+toll    | A3:6 | _ | _ | _ |
+iron    | _ | A3:6 | _ | _ |
+singer  | _ | .:3 A4?:3 | -:3 ~C5:3 | B4:3 ~G#4:3 |
+
+# the rocking toll: louder on each swing out, and now and then on the swing back
+pattern bu1 tempo=52 beats=2 steps=3
+harmony | Am | F/A | Am | F/A | Dm/A | Am | F/A | Esus4 E |
+bass    | A1:4 E2:2 | A1:4 F2:2 | A1:4 E2:2 | A1:4 F2:2 |
+bass    | A1:4 D2:2 | A1:4 E2:2 | A1:4 F2:2 | E2:4 B1:2 |
+pad     | [*]?:6 | % | % | % | % | % | % | % |
+horn    | E4?:6 | F4?:6 | E4?:6 | F4?:6 | F4:6 | E4:6 | F4:6 | E4?:6 |
+iron    | A3?:6 | .:3 {A3 . .}??:3 | A3:6 | .:3 {A3 .}?:3 |
+iron    | A3!:6 | .:3 {A3 .}?:3 | A3!:6 | {A3 .}?:3 .:3 |
+toll    | A3:6 | _ | _ | _ | A3:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
+
+# the same, and the singer hums the bell's note after it, and her beads glint
+pattern bu1b from bu1
+singer  | .:3 {A4 .}?:3 | _ | .:3 {C5 A4 .}?:3 | _ | .:3 {A4 D5 .}?:3 | _ | .:3 {C5 A4 .}?:3 | _ |
+pluck   | .:2 {A5 C6 E6}:4 | .:6 | .:6 | .:2 {A5 C6 F6}:4 | .:2 {A5 D6 F6}:4 | .:6 | .:2 {A5 C6 F6 .}:4 | .:6 |
+
+# the singer sings what the bell rings
+pattern bu2 tempo=52 beats=2 steps=3
+harmony | Am | F/A | Dm/A | Am | F | Dm | Bm7b5 | Esus4 E |
+bass    | A1:4 E2:2 | A1:4 F2:2 | A1:4 D2:2 | A1:4 E2:2 |
+bass    | F1:4 C2:2 | D2:4 A1:2 | B1:4 F2:2 | E2:4 B1:2 |
+pad     | [*]?:6 | % | % | % | % | % | % | % |
+singer  | .:3 E5:3 | ~F5?:4 E5:2 | D5:3 ~A4:3 | A4:4 C5:2 |
+singer  | C5:3 ~F5?:3 | F5?:2 E5 D5:3 | F5?:3 ~B4:3 | B4:3 ~G#4:3 |
+iron    | A3:6 | _ | A3?:6 | _ | A3:6 | _ | A3?:6 | _ |
+toll    | A3:6 | _ | _ | _ | A3:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
+
+# her other verse, higher, with a note she picks from the bell's, and her beads glint
+pattern bu2b from bu2
+singer  | .:3 A4:3 | C5:3 ~F5?:3 | F5?:4 E5 D5 | E5:6 |
+singer  | {A5 F5}:3 ~C5:3 | D5:4 E5 F5? | D5:3 ~B4:3 | {B4 E5}:3 ~G#4:3 |
+pluck   | .:6 | .:2 {A5 C6 F6}:4 | .:6 | .:2 {A5 C6 E6}:4 | .:6 | .:2 {A5 D6 F6}:4 | .:6 | .:6 |
+
+# the chain slips: the bass falls by half steps and the horn climbs against it, while the singer
+# and the bell hold on to A and the chords slide under them
+pattern bu3 tempo=52 beats=2 steps=3
+harmony | Am | E/G# | Am/G | D/F# | Fmaj7 | Am/E | Bm7b5/D | E7 |
+bass    | A1:4 A2:2 | G#1:4 G#2:2 | G1:4 G2:2 | F#1:4 F#2:2 |
+bass    | F1:4 F2:2 | E1:4 E2:2 | D2:4 A1:2 | E2:3 E1:3 |
+pad     | [*]?:6 | % | % | % | [*]:6 | % | % | % |
+horn    | A3?:6 | B3?:6 | C4:6 | D4:6 | E4:6 | E4!:6 | F4!:6 | G#4!:6 |
+singer  | A4:6 | = | A4:6 | = | A4:6 | C5:6 | D5:3 ~F5?:3 | E5:6 |
+iron    | A3:6 | _ | A3:6 | .:3 A3?:3 | A3!:3 {A3 .}?:3 | A3!:3 A3?:3 | A3!:3 A3:3 | A3!!:3 A3!:3 |
+timp    | A2??:6 | G#2??:6 | G2?:6 | F#2?:6 | F2:6 | E2:6 | D2!:6 | E2!:3 E2 E2! E2!! |
+toll    | A3:6 | _ | _ | _ | A3:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
+
+# the Wild Peal: the bell rings on every swing, the singer cries out, and a breaking wave smothers it
+pattern bu4 tempo=52 beats=2 steps=3
+harmony | Am | F/A | Dm/A | Esus4 E |
+iron    | A3!! A3 A3! {A3 .} A3!! {A3 .}! | A3!! {A3 .} A3! A3 {A3 .}! A3! | A3!! A3 {A3 .}! A3!! {A3 . .} A3! | A3??:6 |
+bass    | A1:4 E2:2 | A1:4 F2:2 | A1:4 D2:2 | E2:6 |
+pad     | [*]:6 | % | % | [*]?:6 |
+horn    | A4!:6 | A4!:6 | A4!:4 F4:2 | E4?:6 |
+singer  | A5:6 | ~F5?:4 E5:2 | D5:3 ~A4:3 | .:6 |
+timp    | A2!:3 E2!:3 | A2!:3 F2!:3 | A2!:3 D2!:3 | _ |
+gong    | X..... | _ | X..... | _ |
+breaker | _ | _ | _ | X..... |
+toll    | A3!:6 | _ | _ | _ |
+choir   | [*]:6 | % | % | % |
+
+# ============================================================= one-bar bridges
+# into any fight: the bell strikes and the drums answer
+pattern strike tempo=80 beats=2 steps=3
+key     D minor
+harmony | A7 |
+knell   | A3!:6 |
+tom     | X..xXX |
+pizz    | .:3 A2 C#3 E3 |
+
+# a pin's second phase: the bell cracks
+pattern crack tempo=96 beats=2 steps=3
+key     D minor
+harmony | A7 |
+knell   | A3!!:6 |
+gong    | X..... |
+timp    | A2? A2 A2 A2! A2!! A2!! |
+tom     | ...xXX |
+
+# into the Tolling Buoy: its bell, alone, out of the dark
+pattern clang tempo=52 beats=2 steps=3
+harmony | Am |
+iron    | A3!!:6 |
+bass    | A1:6 |
+timp    | A2!:6 |
+gong    | X..... |
+
+# ============================================================= the end of an expedition
+# the Lantern Heart rises: the song in A major, at dawn
+pattern dawn tempo=60
+key     A major
+harmony | A | C#m | Bm | E | D | Bm | E7 | A |
+flute   | A4:3 B4 C#5:2 | E5:4 D5:2 | D5:2 C#5:2 B4:2 | B4:6 |
+flute   | A4:3 B4 C#5:2 | F#5:4 E5:2 | D5:2 C#5:2 B4:2 | A4:6 |
+horn    | C#4:6 | E4:6 | D4:6 | B3:6 | A3:6 | D4:6 | D4:6 | C#4:6 |
+harp    | [*]:6 | % | % | % | % | % | % | % |
+pad     | [*]:6 | % | % | % | % | % | % | % |
+bass    | A1:4 E2:2 | C#2:4 G#1:2 | B1:4 F#2:2 | E2:4 B1:2 |
+bass    | D2:4 A1:2 | B1:4 F#2:2 | E2:4 B1:2 | A1:6 |
+toll    | A3:6 | _ | _ | _ | A3:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
+
+# the morning after: the light turning over the town
+pattern morning tempo=60
+key     A major
+harmony | A | % | D | % | F#m | % | Esus4 | E |
+lyre    | [*]:6 | % | % | % | % | % | % | % |
+pad     | [*]?:6 | % | % | % | % | % | % | % |
+bass    | A1:6 | = | D2:6 | = | F#1:6 | = | E2:6 | = |
+pluck   | {chord}:2 .:4 | .:2 {chord}:4 | {chord}:2 .:4 | .:6 | {chord}:2 .:4 | .:2 {chord}:4 | {chord}:2 .:4 | .:6 |
+toll    | A3:6 | _ | _ | _ | A3:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % | % | % | % | % |
+
+# the tide takes you: the song's second line, falling, then only the ember
+pattern sink tempo=54
+harmony | Am | Fmaj7 | Dm | Esus4 E | Fmaj7 | Am |
+flute   | E5:4 D5:2 | C5:4 A4:2 | F4:4 E4 D4 | E4:6 | .:6 | .:6 |
+pad     | [*]?:6 | % | % | % | % | % |
+bass    | A1:6 | F1:6 | D2:6 | E2:6 | F1:6 | A1:6 |
+pluck   | _ | _ | _ | _ | .:2 {A5 C6 E6}:4 | .:6 |
+toll    | _ | _ | _ | _ | A3:6 | _ |
+
+pattern ember tempo=54
+harmony | Am | % | Fmaj7 | % |
+pad     | [*]?:6 | % | % | % |
+bass    | A1:6 | = | F1:6 | = |
+pluck   | .:2 {A5 E6 .}:4 | .:6 | .:2 {A5 C6 E6 .}:4 | .:6 |
+toll    | A3:6 | _ | _ | _ |
+choir   | [*]?:6 | % | % | % |
+
+# ============================================================= arrangement
+cue title
+play t_in
+loop theme_a theme_b theme_a2 interlude
+beds sea wind
+
+cue reach
+play r_in
+loop r1 {r2 r3c} r4 {r3 r3c}
+beds sea wind deep
 
 cue fight
-loop fight
+loop f1 f2 f3 {f2 f4}
+beds sea=0.5 deep
 
-cue boss
-loop boss
+cue dread
+loop d1 d2 {d1 f3}
+beds sea=0.4 deep
 
-cue boss2
-loop boss2
+cue pin
+loop p1 p2
+beds sea=0.4 deep
 
-# like the game: a new mood starts on the next bar line while the old one rings out
-switch * -> * at bar fade 2
+cue pin2
+loop q1 q2
+beds sea=0.3 deep
+
+cue buoy
+play bu_in
+loop {bu1 bu1b} {bu2 bu2b} bu3 bu4
+beds sea=0.6 deep
+
+cue home
+play dawn
+loop morning
+beds sea wind=0.6
+
+cue fallen
+play sink
+loop ember
+beds sea=1.2 deep
+
+switch *   -> title  at bar  fade 2
+switch *   -> reach  at bar  fade 2.5
+switch *   -> fight  at bar  via strike  fade 0.8
+switch *   -> dread  at bar  via strike  fade 0.8
+switch *   -> pin    at bar  via strike  fade 1
+switch pin -> pin2   at bar  via crack   fade 0.5
+switch *   -> buoy   at bar  via clang   fade 1
+switch *   -> home   at bar  fade 2
+switch *   -> fallen at beat fade 1.5

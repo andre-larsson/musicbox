@@ -38,8 +38,14 @@
   /* top bar: the score and where to read about the format */
   header { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
   .links { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
-  .links a { color: var(--accent); text-decoration: none; }
-  .links a:hover { text-decoration: underline; }
+  .links a, .links button { color: var(--accent); text-decoration: none; }
+  .links button { border: 0; border-radius: 0; padding: 0; background: none; font: inherit; }
+  .links a:hover, .links button:hover { text-decoration: underline; }
+  .file-tools { min-width: 0; }
+  #file { width: clamp(140px, 24vw, 280px); min-width: 0; text-overflow: ellipsis; }
+  footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 16px; padding: 4px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  footer a { display: inline-block; padding-block: 12px; color: inherit; text-underline-offset: 2px; }
+  footer button { color: inherit; font-size: inherit; }
 
   /* the player: transport, cues, the timeline and what is playing */
   .player { padding: 12px 16px 10px; border-bottom: 1px solid var(--line); background: var(--panel); display: grid; gap: 8px; }
@@ -86,6 +92,8 @@
   /* intensity, mute and solo */
   .mixbar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
   #intensityVal { font-variant-numeric: tabular-nums; min-width: 1ch; }
+  #intensityGroup { flex: 0 0 224px; min-height: 32px; }
+  #intensityGroup.unavailable { visibility: hidden; pointer-events: none; }
   #mixer { flex: 1 1 520px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   #mixer:empty { display: none; }
   #mixer .label { margin-right: 4px; }
@@ -106,10 +114,13 @@
   section.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; }
   section.card h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   textarea { width: 100%; height: 70vh; resize: vertical; border: 1px solid var(--line); border-radius: 6px; background: var(--code); color: var(--ink); padding: 10px; font: 12.5px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre; tab-size: 8; }
+  #scoreTitle { text-transform: none; color: var(--ink); }
+  #saveState { min-height: 1.5em; margin-bottom: 8px; }
+  #saveState.save-error { color: var(--err); }
   /* two columns: the score stays in view, the full height of the window, while the panels beside it scroll */
   @media (min-width: 901px) {
     .card.score { position: sticky; top: 16px; }
-    .card.score textarea { height: max(320px, calc(100vh - 88px)); }
+    .card.score textarea { height: max(240px, calc(100vh - 166px)); }
   }
   /* the analysis, a line per row: a line that wraps carries on under its second column, so tables keep their shape */
   .analysis { font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -138,22 +149,24 @@
      grows as a slider moves never rewraps the chain and moves the panel under the pointer.
      High pass and compressor settings run longest, so their cells are wider. A narrow panel takes
      three stages a row; the arrows sit in the gaps between stages. */
-  .master { container-type: inline-size; }
-  .chain { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.3fr) minmax(0, .8fr) minmax(0, 1.25fr) minmax(0, .8fr); gap: 6px 16px; font-size: 12px; }
+  .master { container: master / inline-size; }
+  .master-workspace { position: relative; }
+  .master-monitor { container: monitor / inline-size; position: sticky; top: 0; z-index: 2; padding: 8px 0; background: var(--panel); box-shadow: 0 1px var(--line); }
+  .master-controls { container: effect / inline-size; margin-top: 12px; min-width: 0; }
+  .chain { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.3fr) minmax(0, .8fr) minmax(0, 1.25fr) minmax(0, .8fr); gap: 6px 16px; font-size: 12px; }
   .chain li { position: relative; min-width: 0; }
   .chain li + li::before { content: "→"; content: "→" / ""; position: absolute; right: 100%; top: 50%; width: 16px; transform: translateY(-50%); text-align: center; color: var(--muted); }
-  @container (max-width: 460px) {
+  @container monitor (max-width: 460px) {
     .chain { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .chain li:nth-child(3n+1)::before { content: none; }
   }
   .chain button { display: flex; flex-direction: column; align-items: stretch; width: 100%; padding: 3px 6px; border-radius: 8px; font-size: 12px; line-height: 1.35; background: var(--panel); text-align: center; }
   .chain button:hover { border-color: var(--muted); }
+  .chain button[aria-selected="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
   .chain button > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .chain small { color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
   .chain button.off { border-style: dashed; color: var(--muted); }
-  .stage { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
-  .stage.flash { animation: flash 1s ease-out; }
-  @keyframes flash { from { background: color-mix(in srgb, var(--accent) 16%, transparent); } to { background: transparent; } }
+  .stage { padding-top: 12px; border-top: 1px solid var(--line); }
   .stageHead { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
   .stageHead h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
   .stage.off .stageHead h3 { text-decoration: line-through; }
@@ -175,8 +188,7 @@
   .ctl.off input[type=range], .stage.off .mbar { opacity: .45; }
   .stage.off .meter .mlabel, .stage.off .meter output { color: var(--muted); }
   #bypass[aria-pressed="true"] { background: var(--eq); border-color: var(--eq); color: var(--panel); font-weight: 600; }
-  #scope { display: block; width: 100%; height: 210px; border-radius: 6px; background: var(--code); touch-action: pan-y; cursor: crosshair; }
-  @media (max-width: 600px) { #scope { height: 170px; } }
+  #scope { display: block; width: 100%; height: clamp(96px, 22svh, 180px); border-radius: 6px; background: var(--code); touch-action: pan-y; cursor: crosshair; }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin-top: 6px; font-size: 12px; color: var(--muted); }
   .legend span { display: inline-flex; align-items: center; gap: 5px; }
   .legend i { display: inline-block; width: 16px; }
@@ -184,7 +196,12 @@
   .legend .avg { height: 0; border-top: 2px solid var(--accent); }
   .legend .eqc { height: 0; border-top: 2px solid var(--eq); }
   .caption { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
-  .meters { margin-top: 12px; }
+  .meters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 12px; margin-top: 8px; }
+  .meters .meter { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 3px 4px; min-width: 0; }
+  .meters .mlabel { font-size: 11px; }
+  .meters .mbar { grid-column: 1 / -1; grid-row: 2; height: 4px; }
+  .meters output { font-size: 12px; }
+  .meters .sub, .meters output small { display: none; }
   .mlabel { display: flex; flex-direction: column; line-height: 1.2; }
   .mlabel small { color: var(--muted); font-size: 11px; }
   .mbar { position: relative; height: 8px; border-radius: 4px; background: var(--code); overflow: hidden; }
@@ -195,6 +212,22 @@
   .gr .mbar::after { display: none; }
   .meter output { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .meter output small { color: var(--muted); }
+  .master-details { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  .master-details summary { cursor: pointer; padding-block: 4px; }
+  .master-details .caption { margin-top: 8px; }
+  .master-details .stageHead { margin-top: 10px; }
+  @container master (min-width: 720px) {
+    .master-workspace { display: grid; grid-template-columns: minmax(260px, .9fr) minmax(320px, 1fr); gap: 16px; align-items: start; }
+    .master-monitor { top: 12px; padding: 0; box-shadow: none; }
+    .master-controls { margin-top: 0; }
+    #scope { height: clamp(120px, 30svh, 240px); }
+  }
+  @media (max-height: 480px) {
+    #scope { height: clamp(64px, 20svh, 96px); }
+    .master-monitor { padding-block: 4px; }
+    .meters { gap: 4px 12px; margin-top: 4px; }
+    .chain small { display: none; }
+  }
   .band { display: grid; grid-template-columns: 20px minmax(6.5em, 1.3fr) repeat(3, minmax(4.4em, 1fr)) var(--rm, 26px); gap: 6px; align-items: center; padding: 4px; border-radius: 6px; }
   .band.sel { background: color-mix(in srgb, var(--eq) 12%, transparent); }
   .band select { padding: 4px 6px; min-width: 0; }
@@ -206,13 +239,50 @@
   #bands .empty { margin: 0 0 6px; color: var(--muted); font-size: 13px; }
   code.line { display: block; flex: 1; min-width: 0; margin-top: 8px; padding: 6px 8px; border-radius: 6px; background: var(--code); color: var(--muted); font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: nowrap; overflow-x: auto; }
   .stageHead code.line { margin-top: 0; }
-  @media (max-width: 480px) { .rows { grid-template-columns: 7.5em minmax(0, 1fr) 4.8em; } }
-  @media (max-width: 480px) {
+  @container effect (max-width: 480px) { .rows { grid-template-columns: 7em minmax(0, 1fr) 4.8em; } }
+  @container effect (max-width: 480px) {
     .band { grid-template-columns: 20px repeat(3, minmax(0, 1fr)) var(--rm, 26px); }
     .band select { grid-column: 2 / 5; }
     .band .remove { grid-column: 5; grid-row: 1; }
     .band .fld:first-of-type { grid-column: 2; }
   }
+  @container effect (max-width: 340px) {
+    .ctl { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-column: 1 / -1; gap: 4px 8px; }
+    .ctl input[type=range] { grid-column: 1 / -1; grid-row: 2; }
+    .ctl .seg { grid-column: 1 / -1; grid-row: 2; }
+    .ctl output { grid-column: 2; grid-row: 1; }
+  }
+
+  /* An in-page guide: a fixed heading and a readable body that scrolls independently. */
+  .format-guide { width: min(760px, calc(100% - 24px)); max-height: calc(100svh - 24px); padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); }
+  .format-guide[open] { display: flex; flex-direction: column; }
+  .compact-dialog { max-width: 520px; }
+  .file-label { display: block; margin: 14px 0 6px; font-weight: 600; }
+  #openFile { width: 100%; }
+  #openText { height: clamp(160px, 30svh, 300px); }
+  .danger { border-color: var(--err); color: var(--err); font-weight: 600; }
+  .format-guide::backdrop { background: rgb(0 0 0 / .55); }
+  .formatHead { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .formatHead h2 { margin: 0; font-size: 18px; }
+  .formatHead { flex-wrap: wrap; }
+  .formatHead .group { margin-left: auto; }
+  .formatStatus { color: var(--muted); font-size: 13px; min-height: 1.5em; }
+  .agent-instructions summary { cursor: pointer; color: var(--accent); }
+  #agentMarkdown { display: block; height: 240px; margin-top: 8px; font-size: 12px; }
+  .formatBody { padding: 16px; overflow-y: auto; overscroll-behavior: contain; font-size: 15px; line-height: 1.6; }
+  .formatBody > :first-child { margin-top: 0; }
+  .formatBody h3 { margin: 24px 0 8px; font-size: 16px; }
+  .ai-compose { padding: 16px; border: 1px solid var(--accent); border-left-width: 4px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 7%, var(--panel)); margin-bottom: 16px; }
+  .ai-compose h3 { margin-top: 0; }
+  .ai-compose strong { color: var(--accent); }
+  .formatBody p { margin: 8px 0; }
+  .formatBody code { font: .9em/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace; background: var(--code); border-radius: 4px; padding: 1px 4px; }
+  .formatBody pre { margin: 12px 0; padding: 12px; border-radius: 6px; background: var(--code); overflow-x: auto; }
+  .formatBody pre code { padding: 0; }
+  .formatBody dl { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.8fr); gap: 8px 16px; margin: 12px 0; }
+  .formatBody dt, .formatBody dd { margin: 0; }
+  .formatBody dd { color: var(--muted); }
+  @media (max-width: 480px) { .formatBody dl { grid-template-columns: 1fr; gap: 4px; } .formatBody dd { margin-bottom: 8px; } }
   /* touch screens: every control at least 40px tall, so a finger finds it */
   @media (pointer: coarse) {
     button, select, input[type=number] { min-height: 40px; }
@@ -230,13 +300,14 @@
 <body>
 <header>
   <h1>musicbox</h1>
-  <div class="group">
-    <select id="file" aria-label="Score file"></select>
+  <div class="group file-tools">
+    <select id="file" aria-label="Score file" disabled></select>
+    <button id="newScore" type="button" title="Start a new score" disabled>New</button>
+    <button id="openScore" type="button" aria-haspopup="dialog" aria-controls="openScoreDialog" disabled>Open…</button>
     <button id="share" title="Copy a link that opens this score, edits included">Copy link</button>
   </div>
   <nav class="links" aria-label="Documentation">
-    <a href="https://github.com/andre-larsson/musicbox/blob/main/docs/PROMPT.md">Format</a>
-    <a href="https://tools.simonwillison.net/scrimshaw-jukebox#guide" title="musicbox is a fork of Scrimshaw by Simon Willison. Every Scrimshaw score plays here unchanged.">Scrimshaw format</a>
+    <button id="format" type="button" aria-haspopup="dialog" aria-controls="formatGuide">Format</button>
     <a href="https://github.com/andre-larsson/musicbox">Source</a>
   </nav>
 </header>
@@ -266,7 +337,7 @@
 </section>
 
 <div class="mixbar">
-  <div class="group">
+  <div class="group unavailable" id="intensityGroup" aria-hidden="true">
     <label class="label" for="intensity">Intensity</label>
     <input id="intensity" type="range" min="0" max="9" step="1" value="9">
     <span id="intensityVal">9</span>
@@ -276,45 +347,44 @@
 
 <main>
   <section class="card score">
-    <h2>Score <span class="hint" id="hint">Ctrl+Enter applies edits</span></h2>
+    <h2><span>Score · <span id="scoreTitle">Loading…</span></span><span class="hint" id="hint">Ctrl+Enter applies edits</span></h2>
+    <p id="scoreMeta" class="caption"></p>
+    <p id="scoreAbout" class="caption" hidden></p>
+    <p id="saveState" class="caption" role="status" aria-live="polite"></p>
     <textarea id="score" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Score text"></textarea>
   </section>
   <div class="side">
-    <section class="card">
-      <h2>Problems <span class="hint" id="problemCount"></span></h2>
-      <ul id="problems"></ul>
-    </section>
     <section class="card master" aria-labelledby="masterH">
       <h2><span id="masterH">Master</span>
         <button id="bypass" class="small" type="button" aria-pressed="false" title="Listen without the mix eq, to compare">Bypass eq</button></h2>
-      <ol class="chain" aria-label="The mastering chain, in order. Each stage jumps to its controls.">
-        <li><button type="button" data-stage="gain"><span>Gain</span> <small id="cGain">0 dB</small></button></li>
-        <li><button type="button" data-stage="highpass"><span>High pass</span> <small id="cHighpass">32 Hz</small></button></li>
-        <li><button type="button" data-stage="eq"><span>Mix eq</span> <small id="cEq">neutral</small></button></li>
-        <li><button type="button" data-stage="comp"><span>Compressor</span> <small id="cComp">−15 dB · 3.2:1</small></button></li>
-        <li><button type="button" data-stage="limit"><span>Limiter</span> <small id="cLimit">−3 dB</small></button></li>
-      </ol>
-      <canvas id="scope" role="img" aria-label="Spectrum of the master output, with the mix eq curve and its bands"></canvas>
-      <div class="legend" aria-hidden="true">
-        <span><i class="now"></i>Now</span><span><i class="avg"></i>3 s average</span><span><i class="eqc"></i>High pass + mix eq (±18 dB)</span>
-      </div>
-      <p class="caption" id="scopeNote">Play to see the spectrum. Drag a numbered point to change the mix eq, or double-click to add one.</p>
-
-      <div class="rows meters" aria-label="Output meters">
-        <div class="meter" id="mLoud"><span class="mlabel">Loudness<small class="sub">short-term, 3 s</small></span><span class="mbar"></span><output>—</output></div>
-        <div class="meter" id="mPeakL"><span class="mlabel">Peak L<small>bar: RMS · line: peak</small></span><span class="mbar"></span><output>—</output></div>
-        <div class="meter" id="mPeakR"><span class="mlabel">Peak R</span><span class="mbar"></span><output>—</output></div>
-      </div>
-
-      <div id="dynamics">
-        <div class="stage" id="stGain">
+      <div class="master-workspace">
+        <div class="master-monitor">
+          <canvas id="scope" role="img" aria-label="Spectrum of the master output, with the high pass and mix eq curve. Edit bands with the Mix eq controls."></canvas>
+          <div class="meters" aria-label="Live output meters; peaks and gain reduction in dB">
+            <div class="meter" id="mLoud" title="Short-term loudness over 3 seconds, in LUFS"><span class="mlabel">LUFS<small class="sub">short-term, 3 s</small></span><span class="mbar"></span><output>—</output></div>
+            <div class="meter" id="mPeakL" title="Left peak in dB; bar shows RMS, marker holds the peak"><span class="mlabel">Peak L</span><span class="mbar"></span><output>—</output></div>
+            <div class="meter" id="mPeakR" title="Right peak in dB; bar shows RMS, marker holds the peak"><span class="mlabel">Peak R</span><span class="mbar"></span><output>—</output></div>
+            <div class="meter gr" id="mComp" title="Compressor gain reduction in dB"><span class="mlabel">Comp</span><span class="mbar"></span><output>—</output></div>
+            <div class="meter gr" id="mLim" title="Limiter gain reduction in dB"><span class="mlabel">Limit</span><span class="mbar"></span><output>—</output></div>
+          </div>
+          <ol class="chain" role="tablist" aria-label="Mastering effects, in signal order">
+            <li role="presentation"><button id="tab-gain" type="button" role="tab" data-stage="gain" aria-controls="stGain" aria-selected="false" tabindex="-1"><span>Gain</span> <small id="cGain">0 dB</small></button></li>
+            <li role="presentation"><button id="tab-highpass" type="button" role="tab" data-stage="highpass" aria-controls="stHighpass" aria-selected="false" tabindex="-1"><span>High pass</span> <small id="cHighpass">32 Hz</small></button></li>
+            <li role="presentation"><button id="tab-eq" type="button" role="tab" data-stage="eq" aria-controls="stEq" aria-selected="true" tabindex="0"><span>Mix eq</span> <small id="cEq">neutral</small></button></li>
+            <li role="presentation"><button id="tab-comp" type="button" role="tab" data-stage="comp" aria-controls="stComp" aria-selected="false" tabindex="-1"><span>Compressor</span> <small id="cComp">−15 dB · 3.2:1</small></button></li>
+            <li role="presentation"><button id="tab-limit" type="button" role="tab" data-stage="limit" aria-controls="stLimit" aria-selected="false" tabindex="-1"><span>Limiter</span> <small id="cLimit">−3 dB</small></button></li>
+          </ol>
+        </div>
+        <div class="master-controls">
+          <div id="dynamics">
+        <div class="stage" id="stGain" role="tabpanel" aria-labelledby="tab-gain" hidden>
           <div class="stageHead"><h3>Input</h3></div>
           <div class="rows">
             <div class="ctl"><label for="mGain">Gain</label><input id="mGain" type="range" min="-24" max="24" step="0.5"><output id="mGainOut"></output></div>
           </div>
         </div>
 
-        <div class="stage" id="stHighpass" data-switch="mHpOn">
+        <div class="stage" id="stHighpass" data-switch="mHpOn" role="tabpanel" aria-labelledby="tab-highpass" hidden>
           <div class="stageHead"><h3>High pass filter</h3><label class="check"><input id="mHpOn" type="checkbox"> On</label></div>
           <div class="rows">
             <div class="ctl"><label for="mHpF">Cutoff</label><input id="mHpF" type="range" min="0" max="1000" step="1"><output id="mHpFOut"></output></div>
@@ -326,32 +396,46 @@
           </div>
         </div>
 
-        <div class="stage" id="stEq">
+        <div class="stage" id="stEq" role="tabpanel" aria-labelledby="tab-eq">
           <div class="stageHead"><h3>Mix eq bands</h3><button id="addBand" class="small" type="button">Add band</button></div>
           <div id="bands"></div>
-          <code id="eqLine" class="line" title="The eq mix line the editor writes to the score"></code>
         </div>
 
-        <div class="stage" id="stComp" data-switch="mCompOn">
+        <div class="stage" id="stComp" data-switch="mCompOn" role="tabpanel" aria-labelledby="tab-comp" hidden>
           <div class="stageHead"><h3>Compressor</h3><label class="check"><input id="mCompOn" type="checkbox"> On</label></div>
           <div class="rows">
             <div class="ctl"><label for="mCompT">Threshold</label><input id="mCompT" type="range" min="-60" max="0" step="0.5"><output id="mCompTOut"></output></div>
             <div class="ctl"><label for="mRatio">Ratio</label><input id="mRatio" type="range" min="0" max="1000" step="1"><output id="mRatioOut"></output></div>
-            <div class="meter gr" id="mComp"><span class="mlabel">Gain reduction</span><span class="mbar"></span><output>—</output></div>
           </div>
         </div>
 
-        <div class="stage" id="stLimit" data-switch="mLimOn">
+        <div class="stage" id="stLimit" data-switch="mLimOn" role="tabpanel" aria-labelledby="tab-limit" hidden>
           <div class="stageHead"><h3>Limiter</h3><label class="check"><input id="mLimOn" type="checkbox"> On</label></div>
           <div class="rows">
             <div class="ctl"><label for="mLimT">Threshold</label><input id="mLimT" type="range" min="-24" max="0" step="0.5"><output id="mLimTOut"></output></div>
-            <div class="meter gr" id="mLim"><span class="mlabel">Gain reduction</span><span class="mbar"></span><output>—</output></div>
+            <div class="ctl"><label for="mMakeup">Make-up gain</label><input id="mMakeup" type="range" min="-24" max="24" step="0.5"><output id="mMakeupOut"></output></div>
+          </div>
+          <p class="caption">Applied after limiting. Positive gain also raises the output peaks; watch the peak meters.</p>
+        </div>
           </div>
         </div>
+      </div>
+      <details class="master-details">
+        <summary>Display guide &amp; score settings</summary>
+        <div class="legend" aria-hidden="true">
+          <span><i class="now"></i>Now</span><span><i class="avg"></i>3 s average</span><span><i class="eqc"></i>High pass + mix eq (±18 dB)</span>
+        </div>
+        <p class="caption" id="scopeNote">Play to see the spectrum. Drag a numbered point to change the mix eq, or double-click to add one.</p>
+        <p class="caption">LUFS is the loudness over the last 3 seconds. Peak L and R show the left and right peaks in dB. Comp and Limit show how many dB the compressor and limiter take away.</p>
         <p class="caption">The compressor and limiter add back some of the level they take (Web Audio's makeup gain), so a lower threshold can make the mix louder. Watch the loudness meter.</p>
+        <code id="eqLine" class="line" title="The eq mix line the editor writes to the score"></code>
         <div class="stageHead"><code id="masterLine" class="line" title="The master line the editor writes to the score"></code>
           <button id="masterReset" class="small" type="button" title="Gain, high pass filter, compressor and limiter back to their defaults">Defaults</button></div>
-      </div>
+      </details>
+    </section>
+    <section class="card">
+      <h2>Problems <span class="hint" id="problemCount"></span></h2>
+      <ul id="problems"></ul>
     </section>
     <section class="card">
       <h2>Analysis</h2>
@@ -359,6 +443,104 @@
     </section>
   </div>
 </main>
+<footer><span>Based on the <a href="https://tools.simonwillison.net/scrimshaw-jukebox#guide">Scrimshaw format</a> by Simon Willison.</span><button id="browserData" type="button" aria-haspopup="dialog" aria-controls="resetLibraryDialog">Browser data…</button></footer>
+<dialog id="openScoreDialog" class="format-guide" aria-labelledby="openScoreTitle">
+  <div class="formatHead"><h2 id="openScoreTitle">Open a score</h2><button id="cancelOpen" type="button">Cancel</button></div>
+  <div class="formatBody">
+    <p>Choose a musicbox or Scrimshaw score file, or paste the complete score below. Its title, instruments, cues and settings come from the score itself.</p>
+    <label class="file-label" for="openFile">Choose a file</label>
+    <input id="openFile" type="file" accept=".scrim,.scrimshaw,.txt,.md,text/plain">
+    <label class="file-label" for="openText">Score text</label>
+    <textarea id="openText" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" placeholder="Paste a .scrim score here" autofocus></textarea>
+    <p class="caption">Imported scores and edits are saved in this browser. A score with errors opens as a draft so you can fix it in Problems.</p>
+    <p id="openStatus" class="formatStatus" role="status" aria-live="polite"></p>
+    <button id="importScore" type="button" class="primary">Open score</button>
+  </div>
+</dialog>
+<dialog id="resetLibraryDialog" class="format-guide compact-dialog" aria-labelledby="resetTitle">
+  <div class="formatHead"><h2 id="resetTitle">Reset browser data</h2></div>
+  <div class="formatBody">
+    <p id="resetCount"></p>
+    <p>This deletes all scores and drafts saved by musicbox in this browser and restores the sample library. This cannot be undone. Use Copy link first for any score you want to keep.</p>
+    <p id="resetStatus" class="formatStatus" role="status" aria-live="polite"></p>
+    <div class="group"><button id="cancelReset" type="button" autofocus>Keep my scores</button><button id="confirmReset" type="button" class="danger">Delete local scores and reset</button></div>
+  </div>
+</dialog>
+<dialog id="formatGuide" class="format-guide" aria-labelledby="formatTitle">
+  <div class="formatHead">
+    <h2 id="formatTitle">Music as text</h2>
+    <div class="group">
+      <button id="closeFormat" type="button" autofocus>Close</button>
+    </div>
+  </div>
+  <div class="formatBody">
+    <section class="ai-compose" aria-labelledby="aiComposeTitle">
+      <h3 id="aiComposeTitle">How to compose a .scrimshaw song (musicbox)</h3>
+      <p><strong>Recommended: compose with an AI chat.</strong> Copy the instructions below and paste them into your AI chat. Add a description of the scene, mood and music you want, and ask for a complete score.</p>
+      <p>The instructions include the full Markdown format reference, composing steps, examples, and commands for checking and sharing a song. Paste the result into <strong>Open…</strong>, then review Problems and try every cue and intensity level.</p>
+      <button id="copyAgent" type="button" class="primary" disabled>Copy for AI</button>
+      <p id="agentCopyStatus" class="formatStatus" role="status" aria-live="polite"></p>
+      <details id="agentInstructions" class="agent-instructions">
+        <summary>Read the AI instructions (Markdown)</summary>
+        <textarea id="agentMarkdown" readonly aria-label="Complete composing instructions for AI, in Markdown" spellcheck="false" wrap="off"></textarea>
+      </details>
+    </section>
+    <p>A musicbox score is a plain-text <code>.scrim</code> file. It names instruments, gives them notes to play, and arranges the music into cues. Every sound is synthesized in your browser.</p>
+
+    <h3>A small score</h3>
+    <p>This loops two bars. Try it in the editor, then change a note or the tempo.</p>
+    <pre><code id="guideExample">title Shore
+tempo 96
+beats 4
+steps 4
+key A minor
+
+voice tune flute
+voice bass fretless
+
+pattern A
+harmony | Am | F |
+tune    | A4:8 C5:8 | F5:8 A5:8 |
+bass    | A1:16 | F1:16 |
+
+cue explore
+loop A</code></pre>
+
+    <h3>How a score fits together</h3>
+    <dl>
+      <dt><code>tempo 96</code></dt><dd>Beats per minute. Higher is faster.</dd>
+      <dt><code>beats 4</code>, <code>steps 4</code></dt><dd>Four beats per bar, divided into four steps each: 16 steps in every bar.</dd>
+      <dt><code>voice tune flute</code></dt><dd>A part called tune, played by a flute. Other instruments include piano, harp, strings, celesta and drums.</dd>
+      <dt><code>pattern A</code></dt><dd>A named passage. Each pair of bar lines contains one bar of notes for a voice.</dd>
+      <dt><code>harmony | Am | F |</code></dt><dd>The chord in each bar. It guides the checker and parts that follow the harmony.</dd>
+      <dt><code>loop A</code></dt><dd>Repeat A. Use <code>play intro</code> before it for a passage that plays once.</dd>
+    </dl>
+
+    <h3>Notes, rests and chords</h3>
+    <p>Every bar must add up to its number of steps. At 4 beats × 4 steps, that is 16.</p>
+    <dl>
+      <dt><code>C5</code></dt><dd>A C in octave 5, lasting one step. Sharps and flats work too: <code>F#4</code>, <code>Bb3</code>.</dd>
+      <dt><code>C5:8</code> or <code>C5-------</code></dt><dd>Hold C for eight steps. Use <code>:N</code> to make long notes easy to count.</dd>
+      <dt><code>.:4</code></dt><dd>Four steps of silence. A dot alone is one step.</dd>
+      <dt><code>[Am]:16</code></dt><dd>A whole bar of A minor. <code>[*]:16</code> follows the harmony line.</dd>
+      <dt><code>%</code>, <code>_</code>, <code>=</code></dt><dd>Used alone in a bar: repeat the previous bar, rest for a bar, or hold the previous note through it.</dd>
+      <dt><code>x... x... x... x...</code></dt><dd>A drum bar. Each character is a step: <code>x</code> hits, <code>X</code> accents, <code>o</code> is quiet, and <code>.</code> rests.</dd>
+    </dl>
+
+    <h3>Cues and intensity</h3>
+    <p>A cue is music for a game state, such as <code>explore</code> or <code>combat</code>. Each cue has its own <code>play</code> and <code>loop</code> lines. The cue buttons let you hear how they hand over.</p>
+    <p>Add <code>layer=1</code> or <code>layer=2</code> to a voice to bring it in at that intensity. Layer 0 is always present. The intensity slider adds and removes these parts while the music keeps its place.</p>
+    <p><code>switch explore -&gt; combat at bar fade 1</code> waits for a bar boundary and fades the old cue for a second. A <code>via</code> pattern can add a fill between them.</p>
+
+    <h3>Music that changes each time</h3>
+    <p><code>{A4 C5 E5}</code> picks a note each time it plays. <code>{chord}</code> picks from the current chord. A voice's <code>chance=0.7</code> plays each note about 70% of the time, and <code>arp=updown</code> turns chords into moving notes.</p>
+    <p><code>loop A {B C}</code> chooses B or C on each pass. Continuous beds such as <code>bed sea sea vol=0.5</code> add ambience that carries across cue changes.</p>
+
+    <h3>Editing and listening</h3>
+    <p>Press <strong>Ctrl+Enter</strong> to apply score edits. Problems points to lines that need fixing; Analysis flags notes to review. The Master controls change the sound immediately and write their settings into the score.</p>
+    <p>Try every cue and intensity level. <strong>Copy link</strong> shares the whole score, including your edits. The agent guide includes the complete syntax and commands for saving, checking and sharing scores.</p>
+  </div>
+</dialog>
 <div id="note" role="status" aria-live="polite"></div>
 <script type="module" src="editor.js"></script>
 </body>

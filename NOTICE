@@ -9,5 +9,5 @@ Derived files, modified for musicbox (changes are marked "musicbox:" in the code
   src/synth.js     Web Audio synthesizer
   docs/PROMPT.md   format reference and composing prompt
 
-Included unmodified:
-  scores/scrimshaw/*.scrim   example scores
+Included unmodified as test fixtures (not in the editor or published site):
+  test/fixtures/scrimshaw/*.scrim   example scores

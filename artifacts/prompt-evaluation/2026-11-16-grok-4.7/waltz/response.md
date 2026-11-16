@@ -1,0 +1,39 @@
+```scrim
+title    Glasshouse Waltz
+composer musicbox
+about    A gentle night waltz under the glass of a clockwork greenhouse, its phrases turning like gears.
+tempo    84
+beats    3
+steps    2
+reverb   0.4
+key      C major
+
+voice melody clarinet vol=0.9 pan=0.15 rev=0.35 human=0.5
+voice piano  piano    vol=0.5 pan=-0.2 gate=0.65 center=E4 rev=0.3 human=0.35
+voice bass   upright  vol=0.85 human=0.4
+
+pattern A
+harmony | C | Am | F | G |
+harmony | C | F | Dm | G7 |
+melody  | E5:2 G5:2 E5 C5 | C5:2 E5:2 C5 A4 | A4:2 C5:2 A4 F4 | B4:2 D5:2 B4 G4 |
+melody  | G5:2 E5 D5 C5:2 | A5:2 F5:2 C5 A4 | D5:2 F5:2 A4 D5 | B4 D5:2 B4 G4:2 |
+piano   | .:2 [*]:2 [*]:2 | % | % | % |
+piano   | % | % | % | % |
+bass    | C2:4 G2:2 | A2:4 E2:2 | F2:4 C2:2 | G2:4 D2:2 |
+bass    | C2:4 G2:2 | F2:4 A2:2 | D2:4 A2:2 | G2:4 B2:2 |
+
+pattern B
+harmony | C | Em | Am | F |
+harmony | Dm | G | Am | G |
+melody  | G5:2 E5:2 C5 D5 | G4:2 B4:2 G4 E4 | A4:2 C5:2 E5 C5 | C5:2 F5:2 A4 C5 |
+melody  | D5:2 F5 E5 D5:2 | B4:2 G4 A4 B4:2 | E5:2 C5 A4:2 E5 | D5:2 B4:2 G4:2 |
+piano   | .:2 [*]:4 | % | % | % |
+piano   | % | % | % | % |
+bass    | C2:2 E2:2 G2:2 | E2:2 G2:2 B2:2 | A2:2 E2:2 C2:2 | F2:2 A2:2 F2:2 |
+bass    | D2:2 F2:2 A2:2 | G2:2 B2:2 G2:2 | A2:2 C2:2 E2:2 | G2:2 D2:2 B2:2 |
+
+cue main
+loop A B
+```
+
+Each phrase leaves B in the bass so the next one can step up to C. The first pattern carries a falling-third motif through C, Am and F before a G7, and the second inverts that shape over Em and Am, with offbeat passing tones, before closing on G.

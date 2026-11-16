@@ -1,0 +1,41 @@
+{
+  "name": "waltz",
+  "title": "Glasshouse Waltz",
+  "checks": {
+    "no_errors": true,
+    "no_warnings": true,
+    "no_range_findings": true,
+    "no_random_clashes": true,
+    "loops_at_least_16_bars": true,
+    "requested_meter": true,
+    "requested_key": true,
+    "requested_tempo": true,
+    "requested_instruments": true,
+    "no_layers_or_beds": true,
+    "requested_cues": true,
+    "runtime": true
+  },
+  "errors": [],
+  "warnings": [],
+  "loops": {
+    "main": 16
+  },
+  "layers": [
+    0
+  ],
+  "findings": {
+    "range": [],
+    "harmony": [],
+    "pick": [],
+    "key": []
+  },
+  "runtime": [
+    {
+      "cue": "main",
+      "intensity": 0,
+      "scheduled_events": 114,
+      "final_cue": "main"
+    }
+  ],
+  "runtimeError": null
+}

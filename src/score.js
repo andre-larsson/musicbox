@@ -135,12 +135,12 @@ function velFrom(marks) {
 // slope in dB per octave, q its resonance: 0.707 for none), the compressor and the limiter. These
 // defaults are the fixed chain musicbox had before the master line existed.
 function masterDefaults() {
-  return { gain: 0, highpass: { f: 32, slope: 24, q: 0.707 }, comp: { threshold: -15, ratio: 3.2 }, limit: { threshold: -3 } };
+  return { gain: 0, highpass: { f: 32, slope: 24, q: 0.707 }, comp: { threshold: -15, ratio: 3.2 }, limit: { threshold: -3, makeup: 0 } };
 }
 
 // musicbox: one setting of a master line, applied to `m`. Returns an error message or null.
 function parseMasterOpt(w, m) {
-  const usage = 'master takes gain=DB highpass=FREQ,SLOPE,Q comp=THRESHOLD,RATIO limit=THRESHOLD, and off for highpass, comp or limit';
+  const usage = 'master takes gain=DB highpass=FREQ,SLOPE,Q comp=THRESHOLD,RATIO limit=THRESHOLD,MAKEUP, and off for highpass, comp or limit';
   const kv = /^(\w+)=(.+)$/.exec(w);
   if (!kv) return `Can't read "${w}" in the master line. ${usage}, like: master gain=-2 comp=-18,4 limit=-1.`;
   const key = kv[1].toLowerCase(), val = kv[2], off = val.toLowerCase() === 'off';
@@ -175,9 +175,12 @@ function parseMasterOpt(w, m) {
     }
     case 'limit': {
       if (off) { m.limit = null; return null; }
-      const th = n(val);
+      const parts = val.split(',');
+      if (parts.length > 2) return `${w} has too many values. Write limit=THRESHOLD,MAKEUP, like limit=-3,+2.`;
+      const th = n(parts[0]), makeup = parts[1] == null ? 0 : n(parts[1]);
       if (!isFinite(th) || th < -24 || th > 0) return `${w}: the limiter's threshold is in dB, from -24 to 0.`;
-      m.limit = { threshold: th }; return null;
+      if (!isFinite(makeup) || makeup < -24 || makeup > 24) return `${w}: the limiter's make-up gain is in dB, from -24 to +24.`;
+      m.limit = { threshold: th, makeup }; return null;
     }
   }
   return `Unknown master setting "${kv[1]}". ${usage}.`;

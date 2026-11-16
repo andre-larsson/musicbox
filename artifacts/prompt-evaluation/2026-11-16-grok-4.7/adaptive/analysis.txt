@@ -1,0 +1,64 @@
+"The Brass Observatory" · 4 beats × 4 steps (16 per bar) · 96 bpm · key A minor
+Mix eq: highshelf 8 kHz +1.5 dB
+Master: gain -3 dB, high pass 36 Hz 24 dB/oct, compressor -16 dB 2.6:1, limiter -3 dB, make-up +1 dB
+
+Cues
+  explore (default)  play intro (4 bars, 10.0 s) → loop A A2 B {C C2} (16 bars, 40.0 s)
+  combat             play fightin (2 bars, 3.8 s) → loop fightA fightB fightC fightD (16 bars, 30.0 s)
+  victory            play fanfare (4 bars, 10.0 s) → then explore
+
+Switches
+  explore -> combat  at bar via hit (1 bar) fade 0.4
+  combat -> explore  at pattern fade 2
+  * -> victory  at beat via sting (1 bar) fade 0.8
+  victory -> explore  at bar fade 2
+
+Beds (continuous; they keep going across cue switches)
+  gale  wind  vol 0.4  in explore ×0.6, combat ×0.22, victory ×0.4
+
+Layers (intensity N plays layers 0 to N)
+  0: lead pad bass gale
+  1: keys hat rim kick snare
+  2: clock brass
+
+Voices
+  lead   horn     layer 0  E4–D5     352 notes  (human 0.75, eq highpass 180 Hz Q0.707)
+  pad    pad      layer 0  E4–D5     64 notes  (eq highpass 140 Hz Q0.707)
+  bass   upright  layer 0  B1–B2     232 notes  (human 0.45)
+  keys   vibes    layer 1  B3–A4     237 notes
+  hat    hat      layer 1  356 hits  (human 0.55)
+  rim    rim      layer 1  77 hits  (human 0.5)
+  kick   kick     layer 1  135 hits  (human 0.25, eq peak 75 Hz -5 dB Q1.4)
+  snare  snare    layer 1  63 hits  (human 0.25)
+  clock  celesta  layer 2  B4–C6     267 notes  (arp up, every 2 steps, chance 0.8, human 0.3, eq highpass 280 Hz Q0.707)
+  brass  trumpet  layer 2  D4–C5     46 notes
+
+Patterns
+  intro     4 bars  voices: lead pad bass keys hat rim clock
+           harmony: | Am | Am | Dm | Em |
+  A         4 bars  voices: lead pad bass keys hat rim clock
+           harmony: | Am | Dm | F | Em |
+  A2        4 bars  voices: lead pad bass keys hat rim clock
+           harmony: | C | G | Dm | Em |
+  B         4 bars  voices: lead pad bass keys hat rim clock
+           harmony: | Am | F | C | G |
+  C         4 bars  voices: lead pad bass keys hat rim clock
+           harmony: | Dm | Am | F | Em |
+  C2        4 bars  voices: lead pad bass keys hat rim clock
+           harmony: | Dm | Am | F | Em |
+  hit       1 bar   128 bpm  voices: lead pad bass keys hat kick snare brass clock
+           harmony: | Em |
+  fightin   2 bars  128 bpm  voices: lead pad bass keys hat kick snare brass clock
+           harmony: | Am | Em |
+  fightA    4 bars  128 bpm  voices: lead pad bass keys hat kick snare brass clock
+           harmony: | Am | Am | F | Em |
+  fightB    4 bars  128 bpm  voices: lead pad bass keys hat kick snare brass clock
+           harmony: | Dm | Am | C | G |
+  fightC    4 bars  128 bpm  voices: lead pad bass keys hat kick snare brass clock
+           harmony: | Am | F | C | G |
+  fightD    4 bars  128 bpm  voices: lead pad bass keys hat kick snare brass clock
+           harmony: | Dm | F | G | Em |
+  sting     1 bar   voices: lead pad bass brass clock
+           harmony: | Am |
+  fanfare   4 bars  voices: lead pad bass keys hat kick snare brass clock
+           harmony: | Am | F | C | Em |
